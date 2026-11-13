@@ -2015,42 +2015,12 @@ a {
 /* ---------- Inicio (landing) ---------- */
 
 .landing {
-  position: relative;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
   overflow: hidden;
-  color: #f8edef;
-  background: #0e872c;
-}
-
-.landing::before,
-.landing::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  opacity: 0.6;
-  filter: blur(60px);
-  pointer-events: none;
-}
-
-.landing::before {
-  top: -32%;
-  left: 50%;
-  width: 90vw;
-  height: 90vw;
-  background: #17a03c;
-  transform: translateX(-50%);
-}
-
-.landing::after {
-  bottom: -42%;
-  left: 12%;
-  width: 76vw;
-  height: 76vw;
-  background: #096b21;
+  color: var(--ink);
+  background: #ffffff;
 }
 
 .landing__header {
@@ -2071,37 +2041,33 @@ a {
 }
 
 .landing__link {
-  color: rgba(248, 237, 239, 0.78);
+  color: var(--ink-soft);
   font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
 }
 
 .landing__link:hover {
-  color: #79ff9b;
+  color: var(--brand-dark);
 }
 
 .landing .btn--primary {
-  background: #79ff9b;
-  color: #08280f;
+  background: var(--brand);
+  color: #ffffff;
 }
 
 .landing .btn--primary:hover {
-  background: #a6ffbc;
+  background: var(--brand-dark);
 }
 
 .landing .btn--outline {
-  border-color: rgba(248, 237, 239, 0.55);
-  background: transparent;
-  color: #f8edef;
+  border-color: var(--line);
+  background: #ffffff;
+  color: var(--ink);
 }
 
 .landing .btn--outline:hover {
-  background: rgba(248, 237, 239, 0.14);
-}
-
-.landing :focus-visible {
-  outline-color: #79ff9b;
+  background: var(--surface-soft);
 }
 
 .landing__stage {
@@ -2124,7 +2090,7 @@ a {
 
 .landing .eyebrow {
   justify-content: flex-start;
-  color: #a6ffbc;
+  color: var(--brand-dark);
 }
 
 .landing__slogan {
@@ -2134,18 +2100,18 @@ a {
   font-weight: 400;
   line-height: 1.02;
   letter-spacing: -0.02em;
-  color: #f8edef;
+  color: var(--ink);
 }
 
 .landing__slogan em {
   font-style: italic;
-  color: #79ff9b;
+  color: var(--brand);
 }
 
 .landing__lead {
   max-width: 46ch;
   margin: 0;
-  color: rgba(248, 237, 239, 0.92);
+  color: var(--ink-soft);
   font-size: 16.5px;
 }
 
@@ -2162,7 +2128,7 @@ a {
   grid-row: 1;
   max-width: 320px;
   padding-left: 22px;
-  border-left: 2px solid rgba(248, 237, 239, 0.4);
+  border-left: 2px solid rgba(14, 135, 44, 0.35);
 }
 
 .landing__aside h2 {
@@ -2172,12 +2138,12 @@ a {
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: -0.01em;
-  color: #f8edef;
+  color: var(--brand-dark);
 }
 
 .landing__aside p {
   margin: 0 0 14px;
-  color: rgba(248, 237, 239, 0.9);
+  color: var(--ink-soft);
   font-size: 14px;
   line-height: 1.65;
 }
@@ -2187,7 +2153,7 @@ a {
 }
 
 .landing__aside strong {
-  color: #79ff9b;
+  color: var(--brand);
   font-weight: 700;
 }
 
