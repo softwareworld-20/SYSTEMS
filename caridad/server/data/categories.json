@@ -1,0 +1,10 @@
+[
+  { "id": "salud", "label": "Salud", "emoji": "🩺" },
+  { "id": "alimentacion", "label": "Alimentación", "emoji": "🥫" },
+  { "id": "educacion", "label": "Educación", "emoji": "📚" },
+  { "id": "vivienda", "label": "Vivienda", "emoji": "🏠" },
+  { "id": "transporte", "label": "Transporte", "emoji": "🚗" },
+  { "id": "compania", "label": "Compañía", "emoji": "🤝" },
+  { "id": "empleo", "label": "Empleo", "emoji": "💼" },
+  { "id": "otros", "label": "Otros", "emoji": "✨" }
+]
