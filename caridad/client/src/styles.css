@@ -282,7 +282,7 @@ a {
   align-items: center;
   gap: 6px;
   padding: 8px 4px;
-  color: rgba(248, 237, 239, 0.78);
+  color: rgba(248, 237, 239, 0.88);
   font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
@@ -2015,22 +2015,42 @@ a {
 /* ---------- Inicio (landing) ---------- */
 
 .landing {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
   overflow: hidden;
-  color: var(--ink);
-  background: radial-gradient(
-      circle at 84% 6%,
-      rgba(121, 255, 155, 0.45),
-      transparent 42%
-    ),
-    radial-gradient(
-      circle at 0% 100%,
-      rgba(14, 135, 44, 0.16),
-      transparent 46%
-    ),
-    linear-gradient(160deg, #f8edef 0%, #f5eaec 55%, #eff8f1 100%);
+  color: #f8edef;
+  background: #0e872c;
+}
+
+.landing::before,
+.landing::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  opacity: 0.6;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.landing::before {
+  top: -32%;
+  left: 50%;
+  width: 90vw;
+  height: 90vw;
+  background: #17a03c;
+  transform: translateX(-50%);
+}
+
+.landing::after {
+  bottom: -42%;
+  left: 12%;
+  width: 76vw;
+  height: 76vw;
+  background: #096b21;
 }
 
 .landing__header {
@@ -2051,14 +2071,37 @@ a {
 }
 
 .landing__link {
-  color: var(--ink-soft);
+  color: rgba(248, 237, 239, 0.78);
   font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
 }
 
 .landing__link:hover {
-  color: var(--brand-dark);
+  color: #79ff9b;
+}
+
+.landing .btn--primary {
+  background: #79ff9b;
+  color: #08280f;
+}
+
+.landing .btn--primary:hover {
+  background: #a6ffbc;
+}
+
+.landing .btn--outline {
+  border-color: rgba(248, 237, 239, 0.55);
+  background: transparent;
+  color: #f8edef;
+}
+
+.landing .btn--outline:hover {
+  background: rgba(248, 237, 239, 0.14);
+}
+
+.landing :focus-visible {
+  outline-color: #79ff9b;
 }
 
 .landing__stage {
@@ -2081,7 +2124,7 @@ a {
 
 .landing .eyebrow {
   justify-content: flex-start;
-  color: var(--brand-dark);
+  color: #a6ffbc;
 }
 
 .landing__slogan {
@@ -2091,18 +2134,18 @@ a {
   font-weight: 400;
   line-height: 1.02;
   letter-spacing: -0.02em;
-  color: var(--ink);
+  color: #f8edef;
 }
 
 .landing__slogan em {
   font-style: italic;
-  color: var(--brand);
+  color: #79ff9b;
 }
 
 .landing__lead {
   max-width: 46ch;
   margin: 0;
-  color: var(--ink-soft);
+  color: rgba(248, 237, 239, 0.92);
   font-size: 16.5px;
 }
 
@@ -2119,7 +2162,7 @@ a {
   grid-row: 1;
   max-width: 320px;
   padding-left: 22px;
-  border-left: 2px solid rgba(14, 135, 44, 0.35);
+  border-left: 2px solid rgba(248, 237, 239, 0.4);
 }
 
 .landing__aside h2 {
@@ -2129,12 +2172,12 @@ a {
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: -0.01em;
-  color: var(--brand-dark);
+  color: #f8edef;
 }
 
 .landing__aside p {
   margin: 0 0 14px;
-  color: var(--ink-soft);
+  color: rgba(248, 237, 239, 0.9);
   font-size: 14px;
   line-height: 1.65;
 }
@@ -2144,7 +2187,7 @@ a {
 }
 
 .landing__aside strong {
-  color: var(--brand);
+  color: #79ff9b;
   font-weight: 700;
 }
 

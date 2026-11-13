@@ -45,7 +45,7 @@ export default function LandingPage() {
   return (
     <div className="landing">
       <header className="landing__header">
-        <Brand variant="dark" />
+        <Brand variant="light" />
 
         <nav className="landing__nav" aria-label="Principal">
           <Link className="landing__link" to="/Explorar_comunidad">
