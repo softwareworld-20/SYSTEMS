@@ -1,0 +1,633 @@
+:root {
+  /* Paleta ListenU */
+  --blue-bell: #009dff;
+  --blue: #0d00fd;
+  --black: #000000;
+  --white: #ffffff;
+
+  --text-soft: rgba(255, 255, 255, 0.72);
+  --font-display: "Black Ops One", "Sora", system-ui, sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--black);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(0, 157, 255, 0.35);
+  color: var(--white);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------------ */
+/* Fondo de ondas (SVG + CSS, sin dependencias externas)               */
+/* ------------------------------------------------------------------ */
+
+.waves {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 62% 52% at 50% 88%,
+      rgba(13, 0, 253, 0.42),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 52% 44% at 8% 94%,
+      rgba(0, 157, 255, 0.18),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 48% 40% at 44% 24%,
+      rgba(0, 157, 255, 0.16),
+      transparent 74%
+    ),
+    var(--black);
+}
+
+.waves__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.waves__layer {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: wave-bob 13s ease-in-out infinite alternate;
+}
+
+.waves__layer--back {
+  animation-duration: 17s;
+}
+
+.waves__layer--mid {
+  animation-duration: 13s;
+  animation-delay: -4s;
+}
+
+.waves__layer--front {
+  animation-duration: 10s;
+  animation-delay: -2s;
+}
+
+.waves__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 56% 48% at 50% 46%,
+      rgba(0, 0, 0, 0.38),
+      transparent 82%
+    ),
+    radial-gradient(
+      ellipse 92% 78% at 50% 45%,
+      transparent 30%,
+      rgba(0, 0, 0, 0.58) 80%,
+      #000 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      transparent 26%,
+      transparent 66%,
+      rgba(0, 0, 0, 0.62) 100%
+    );
+}
+
+/* ------------------------------------------------------------------ */
+/* Welcome                                                            */
+/* ------------------------------------------------------------------ */
+
+.welcome {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(2.5rem, 8vh, 5rem) clamp(1.25rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.welcome__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.9rem, 2.6vh, 1.75rem);
+  width: 100%;
+  max-width: 52rem;
+}
+
+.welcome__content > * {
+  animation: rise 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.welcome__content > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.welcome__content > *:nth-child(3) {
+  animation-delay: 0.22s;
+}
+
+.welcome__content > *:nth-child(4) {
+  animation-delay: 0.34s;
+}
+
+.welcome__content > *:nth-child(5) {
+  animation-delay: 0.46s;
+}
+
+.welcome__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  padding-left: 0.4em;
+  font-size: clamp(0.62rem, 1.6vw, 0.72rem);
+  font-weight: 400;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.welcome__pulse {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 28%,
+    #ffffff,
+    var(--blue-bell) 42%,
+    var(--blue) 100%
+  );
+  box-shadow: 0 0 12px rgba(0, 157, 255, 0.9);
+  animation: pulse 2.6s ease-in-out infinite;
+}
+
+.welcome__brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.welcome__brand::before {
+  content: "";
+  position: absolute;
+  inset: 5% -25% -15%;
+  z-index: -1;
+  background: radial-gradient(
+    closest-side,
+    rgba(0, 157, 255, 0.16),
+    rgba(13, 0, 253, 0.16) 48%,
+    transparent 76%
+  );
+  filter: blur(32px);
+}
+
+/* Icono de ondas: sin cristal, solo el trazo y su brillo */
+.welcome__badge {
+  display: grid;
+  place-items: center;
+  margin-bottom: clamp(0.85rem, 2vh, 1.3rem);
+}
+
+.welcome__mark {
+  display: block;
+  width: clamp(2.6rem, 4.6vw, 3.2rem);
+  height: clamp(2.6rem, 4.6vw, 3.2rem);
+  stroke: var(--blue-bell);
+  filter: drop-shadow(0 0 12px rgba(0, 157, 255, 0.85));
+}
+
+.welcome__title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.35rem, 1.2vh, 0.8rem);
+  margin: 0;
+}
+
+.welcome__name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(2.45rem, 11.5vw, 7rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: 0.005em;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f0fbff 32%,
+    #9fe0ff 70%,
+    var(--blue-bell) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(0, 157, 255, 0.35))
+    drop-shadow(0 0 80px rgba(13, 0, 253, 0.45));
+}
+
+.welcome__vibes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.7rem, 2.4vw, 1.4rem);
+  padding-left: clamp(0.3em, 1vw, 0.55em);
+  font-size: clamp(0.68rem, 2vw, 1rem);
+  font-weight: 500;
+  letter-spacing: clamp(0.3em, 1vw, 0.55em);
+  text-transform: uppercase;
+  color: #a9e2ff;
+  text-shadow: 0 0 20px rgba(0, 157, 255, 0.5);
+}
+
+.welcome__rule {
+  width: clamp(1.5rem, 8vw, 4.5rem);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 157, 255, 0.75));
+}
+
+.welcome__rule--right {
+  background: linear-gradient(270deg, transparent, rgba(0, 157, 255, 0.75));
+}
+
+.welcome__tagline {
+  max-width: 36ch;
+  margin: 0;
+  font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+  line-height: 1.75;
+  color: var(--text-soft);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+  text-wrap: balance;
+}
+
+.welcome__tagline strong {
+  font-weight: 500;
+  color: var(--white);
+}
+
+.welcome__wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: clamp(1.8rem, 4vh, 2.6rem);
+}
+
+.welcome__bar {
+  width: 4px;
+  height: calc(var(--peak) * 100%);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #9fe0ff 28%,
+    var(--blue-bell) 62%,
+    var(--blue) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(0, 157, 255, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.75);
+  transform-origin: bottom;
+  animation: equalize 1.25s ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+}
+
+.welcome__soon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: clamp(0.6rem, 1.5vw, 0.7rem);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.welcome__dot {
+  width: 0.34rem;
+  height: 0.34rem;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 28%,
+    #ffffff,
+    var(--blue-bell) 45%,
+    var(--blue) 100%
+  );
+  box-shadow: 0 0 8px rgba(0, 157, 255, 0.9);
+  animation: pulse 2.6s ease-in-out infinite;
+}
+
+/* El footer vive fuera de <main>, fijo al borde inferior de la pantalla. */
+.welcome__footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: clamp(1.1rem, 3.5vh, 2rem);
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-inline: 1.25rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  animation: rise 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) 0.55s both;
+}
+
+.welcome__footer-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(0, 157, 255, 0.65);
+}
+
+/* ------------------------------------------------------------------ */
+/* Animaciones                                                        */
+/* ------------------------------------------------------------------ */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes equalize {
+  from {
+    transform: scaleY(0.32);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes wave-bob {
+  from {
+    transform: translate(-12px, -7px);
+  }
+  to {
+    transform: translate(12px, 9px);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Ajustes responsivos                                                */
+/* ------------------------------------------------------------------ */
+
+@media (max-height: 680px) {
+  .welcome {
+    padding-top: 2rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .welcome__content {
+    gap: 0.85rem;
+  }
+
+  .welcome__badge {
+    margin-bottom: 0.4rem;
+  }
+
+  .welcome__mark {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .welcome__wave {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome__kicker {
+    font-size: 0.58rem;
+    letter-spacing: 0.28em;
+  }
+}
+
+@media (max-width: 360px) {
+  .welcome__vibes {
+    font-size: 0.62rem;
+  }
+
+  .welcome__rule {
+    width: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Layout interno (PillNav)                                            */
+/* ------------------------------------------------------------------ */
+
+.layout {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.layout__header {
+  display: flex;
+  justify-content: center;
+  padding: clamp(1rem, 3vh, 1.75rem) clamp(1rem, 4vw, 2rem);
+}
+
+.layout__logo {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg, #fff 0%, #9fe0ff 70%, var(--blue-bell) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.layout__main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vh, 2rem);
+}
+
+/* ------------------------------------------------------------------ */
+/* ComingSoon (404 de vistas internas)                                 */
+/* ------------------------------------------------------------------ */
+
+.coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 40rem;
+  text-align: center;
+}
+
+.coming-soon__code {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 12vw, 6rem);
+  line-height: 1;
+  background: linear-gradient(180deg, #fff 0%, #9fe0ff 60%, var(--blue-bell) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(0, 157, 255, 0.35));
+}
+
+.coming-soon__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 500;
+  color: var(--white);
+}
+
+.coming-soon__text {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.coming-soon__back {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 157, 255, 0.4);
+  color: var(--white);
+  text-decoration: none;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.coming-soon__back:hover {
+  background: rgba(0, 157, 255, 0.12);
+  border-color: rgba(0, 157, 255, 0.8);
+}
+
+/* ------------------------------------------------------------------ */
+/* Layout General + PillNav                                            */
+/* ------------------------------------------------------------------ */
+
+.layout {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.layout__header {
+  display: flex;
+  justify-content: center;
+  padding: clamp(1rem, 3vh, 1.75rem) clamp(1rem, 4vw, 2rem);
+  /* Aseguramos que el header se quede arriba */
+  width: 100%;
+}
+
+.layout__logo {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg, #fff 0%, #9fe0ff 70%, var(--blue-bell) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.layout__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* Quitamos el "place-items: center" para que la Welcome ocupe toda la altura natural */
+}
+
+/* 
+ * Ajuste a la Welcome para que no se salga de la pantalla 
+ * ahora que comparte espacio con el Nav.
+ */
+.layout .welcome {
+  min-height: auto; /* Quitamos el 100vh forzado */
+  flex: 1;          /* Hacemos que llene el espacio restante */
+  padding-top: 1rem; /* Reducimos el padding superior porque ya está el nav */
+  padding-bottom: 4rem; /* Dejamos espacio para el footer fijo */
+}
+
+/* Opcional: Ocultamos el footer fijo en pantallas muy pequeñas si choca con el menú móvil */
+@media (max-height: 680px) {
+  .layout .welcome {
+    padding-top: 0.5rem;
+  }
+}
