@@ -610,6 +610,10 @@ const PillNav = ({
     const root = rootRef.current;
     if (!panel || !root) return undefined;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    // En pantallas táctiles, animar con clip-path deja las filas fuera del área
+    // de hit-testing durante la apertura: el primer toque cae detrás del menú y
+    // el listener global lo toma como "clic fuera", cerrándolo sin navegar.
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     const width = panel.offsetWidth;
     const height = panel.offsetHeight;
     const header = joined ? root.offsetHeight : (toggleRef.current?.offsetHeight ?? 44);
@@ -621,33 +625,48 @@ const PillNav = ({
     const running = [];
     if (open) {
       if (reduce) return undefined;
-      running.push(panel.animate([{ clipPath: start }, { clipPath: end }], { duration: 560, easing: EASE_OUT }));
-      rows.forEach((row, index) => {
-        running.push(
-          row.animate(
-            [
-              { opacity: 0, transform: 'translateY(-8px)' },
-              { opacity: 1, transform: 'translateY(0)' }
-            ],
-            { duration: 420, delay: 90 + index * 40, easing: EASE_OUT, fill: 'backwards' }
-          )
-        );
-      });
+      if (coarse) {
+        // Solo opacidad: las filas son clicables desde el primer frame.
+        running.push(panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: EASE_OUT }));
+      } else {
+        running.push(panel.animate([{ clipPath: start }, { clipPath: end }], { duration: 560, easing: EASE_OUT }));
+        rows.forEach((row, index) => {
+          running.push(
+            row.animate(
+              [
+                { opacity: 0, transform: 'translateY(-8px)' },
+                { opacity: 1, transform: 'translateY(0)' }
+              ],
+              { duration: 420, delay: 90 + index * 40, easing: EASE_OUT, fill: 'backwards' }
+            )
+          );
+        });
+      }
     } else {
       if (reduce) {
         setPanelShown(false);
         return undefined;
       }
-      const morph = panel.animate([{ clipPath: end }, { clipPath: start }], {
-        duration: 380,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-        fill: 'forwards'
-      });
-      morph.onfinish = () => setPanelShown(false);
-      running.push(morph);
-      rows.forEach(row => {
-        running.push(row.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }));
-      });
+      if (coarse) {
+        const fade = panel.animate([{ opacity: 1 }, { opacity: 0 }], {
+          duration: 180,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          fill: 'forwards'
+        });
+        fade.onfinish = () => setPanelShown(false);
+        running.push(fade);
+      } else {
+        const morph = panel.animate([{ clipPath: end }, { clipPath: start }], {
+          duration: 380,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          fill: 'forwards'
+        });
+        morph.onfinish = () => setPanelShown(false);
+        running.push(morph);
+        rows.forEach(row => {
+          running.push(row.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }));
+        });
+      }
     }
     return () => {
       running.forEach(animation => {
@@ -827,6 +846,8 @@ const PillNav = ({
                     className: ROW,
                     'aria-current': index === activeIndex ? 'page' : undefined,
                     tabIndex: open ? undefined : -1,
+                    // Evita que el listener global de "clic fuera" cierre el menú al tocar una fila.
+                    onPointerDown: event => event.stopPropagation(),
                     onClick: event => {
                       choose(item, index, event);
                       setOpen(false);
