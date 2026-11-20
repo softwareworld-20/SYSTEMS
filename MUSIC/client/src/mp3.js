@@ -5,7 +5,7 @@ const asText = value => (typeof value === "string" ? value.trim() : "");
 
 let readerPromise;
 
-/** Loads jsmediatags only when the first MP3 is selected. */
+/** Loads jsmediatags only when the first audio file is selected. */
 function getReader() {
   readerPromise ??= import("jsmediatags/dist/jsmediatags.min.js").then(
     module => module.default,
@@ -29,7 +29,7 @@ function pictureToDataUrl(picture) {
 }
 
 /**
- * Reads ID3 tags from an MP3 File/Blob.
+ * Reads embedded tags from an audio File/Blob (ID3 works best on MP3).
  * Resolves with empty values when the file has no tags or reading fails.
  */
 export async function readMp3Tags(file) {

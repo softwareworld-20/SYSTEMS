@@ -45,7 +45,8 @@ inventes comandos. Verifica con `npm run build` y un `GET /api/health`.
 
 - CSS global en `client/src/styles.css` y archivos colados por componente
   (`PillNav.css`, `DarkVeil.css`, `AnimatedList.css`, `Player.css`,
-  `ElasticSlider.css`, `InfiniteMenu.css`). Estilos de playlist y modal en
+  `ElasticSlider.css`, `InfiniteMenu.css`, `ThoughtLine.css`). Estilos de
+  playlist y modal en
   `client/src/styles/upload.css`, importados por `Playlist.jsx` y `Albums.jsx`.
   La pantalla de login tiene `client/src/styles/login.css`, importado por
   `pages/Login.jsx`.
@@ -65,7 +66,7 @@ anidado en `<Route element={<NavLayout />}>`:
 | --- | --- |
 | `/login` | Formulario de acceso; mitad izquierda con el fondo WebGL, mitad derecha con el formulario. |
 | `/` | Welcome (`pages/Welcome.jsx`). |
-| `/playlist` | Funcional: subir, listar, seleccionar, borrar, editar y reproducir. |
+| `/playlist` | Funcional: buscar, subir, listar en orden alfabético con índice lateral, seleccionar, borrar, editar y reproducir en cola. |
 | `/albums` | Funcional: `InfiniteMenu` + detalle de álbum con `AnimatedList`. |
 | `/settings` | `ComingSoon` ("Configura ListenU a tu manera. Próximamente."). |
 | `*` | `ComingSoon` de 404. |
@@ -89,7 +90,7 @@ Los ajustes del shader están en `components/veilProps.js` y los comparten
 | Dato | Parte | Clave / ubicación |
 | --- | --- | --- |
 | Metadatos de canciones | `hooks/useTracks.js` | localStorage `listen-u:tracks` |
-| Blobs MP3 | `trackFiles.js` | IndexedDB `listen-u`, store `track-files` (clave = id del track) |
+| Blobs de audio | `trackFiles.js` | IndexedDB `listen-u`, store `track-files` (clave = id del track) |
 | Sugerencias de artista/álbum | `components/UploadModal.jsx` | localStorage `listen-u:artists`, `listen-u:albums` |
 | Carátula/descripción de álbum | `albumMeta.js` | localStorage `listen-u:album-meta` |
 | Sesión de demo | `auth.js` | sessionStorage `listen-u:session` |
@@ -99,27 +100,60 @@ Los ajustes del shader están en `components/veilProps.js` y los comparten
   con `hasFile: false` y el reproductor mostrará "El audio de esta canción no
   está disponible.".
 - `addTrack` recibe `{ file, ...meta }`: separa el `File` antes de guardar la
-  metadata en localStorage (nunca guardes el `File` ahí).
+  metadata en localStorage (nunca guardes el `File` ahí). `addTracks(items)` es
+  la versión múltiple: guarda los blobs en orden y añade todas las canciones de
+  una sola vez.
 - `buildAlbums(tracks)` agrupa por `album`, usa `—` para "Sin álbum" (va al
   final), y toma la carátula de `albumMeta` o de la primera canción con cover.
 
 ## Subida y reproducción
 
-- `UploadModal.jsx`: portal a `document.body`, solo MP3 (`audio/mpeg` o
-  extensión `.mp3`), cierra con Escape y bloquea el scroll del body.
+- `UploadModal.jsx`: portal a `document.body`, bloquea el scroll del body y
+  **no cierra al hacer clic fuera**: se cierra con la X, con **Cancelar** o con
+  Escape. Acepta **cualquier formato de audio** (`audio/*` más
+  extensiones como `.m4a`, `.wav`, `.flac`, `.ogg`, `.aac`, `.webm`, `.wma`,
+  `.aiff`, también `.mp4` de audio); el input permite varios archivos, máximo 20.
+- Subida múltiple (2 o más archivos): **no se muestra el formulario**. Se leen
+  etiquetas incrustadas (cuando existen) y duración de cada archivo y se guardan
+  tal cual (título = tag o nombre del archivo sin extensión, artista/álbum por
+  defecto). Se insertan con `addTracks` en el orden elegido y luego se editan de
+  una en una desde `Editar`.
+- Mientras se procesa el lote, el modal muestra `components/ThoughtLine.jsx` en
+  la columna derecha: lista de archivos a la izquierda y el indicador de
+  progreso a la derecha. El componente es local (traído de react-bits) y usa
+  `motion` (dependencia añadida a `client/package.json`) más `ThoughtLine.css`.
 - El mismo modal sirve para editar: la barra de selección de `Playlist` muestra
   `Editar` (habilitado solo con una canción marcada), pasa `track` al modal y
   precarga los datos. Guardar llama a `updateTrack(id, patch)`, que conserva
   `id`, `hasFile`, duración y el blob de IndexedDB; el alta sigue usando
   `addTrack`.
-- `mp3.js` importa `jsmediatags` de forma diferida al seleccionar el primer MP3
-  y lee título/artista/álbum/carátula (ID3 → data URL). Si falla, devuelve
-  campos vacíos; no es un error de la app.
-- `media.js` lee la duración con un `<audio>` temporal (revoca el object URL) y
-  formatea `m:ss` / `h:mm:ss`.
+- `audio.js` centraliza `isAudioFile`, `audioMime` y `normalizeAudio`. Los blobs
+  sin MIME (o con MIME de vídeo, típico en `.m4a`) se guardan como `File` con el
+  MIME correcto para que el object URL sea reproducible. El track guarda
+  además el campo `mime`.
+- `mp3.js` importa `jsmediatags` de forma diferida al seleccionar el primer
+  archivo y lee título/artista/álbum/carátula (ID3 → data URL). En formatos no
+  MP3 suele devolver campos vacíos; la subida usa entonces el nombre del
+  archivo. No es un error de la app.
+- `media.js` lee la duración con un `<audio>` temporal sobre el blob
+  normalizado (revoca el object URL) y formatea `m:ss` / `h:mm:ss`.
 - `Player.jsx` es un drawer lateral derecho: reproduce el blob de IndexedDB
-  mediante object URL, la revoca al cambiar de pista y al desmontar, y usa
-  `ElasticSlider` para el volumen. Errores y estados en español.
+  mediante object URL normalizado, lo revoca al cambiar de pista y al desmontar,
+  y usa `ElasticSlider` para el volumen. Si el códec no es compatible con el
+  navegador, muestra un error claro en español en vez de fallar en silencio.
+- Cola de reproducción: `Player` recibe `queue` y `onSelectTrack`; al terminar
+  una pista pasa a la siguiente del orden de la lista (no hace loop al final) y
+  muestra controles de anterior/siguiente y la posición `n / total`. `Playlist`
+  usa todas las canciones ordenadas como cola; el detalle de álbum usa las del
+  álbum. Cambiar de pista se hace actualizando `activeId`, no montando otro
+  reproductor.
+- `Playlist.jsx` ordena por título (insensible a mayúsculas/acentos y con
+  `localeCompare` en español) y busca por título, artista, álbum y nombre de
+  archivo. El índice `# A…Z Ñ` a la derecha resalta la letra visible y salta a
+  la primera canción de esa letra.
+- `AnimatedList.jsx` expone de forma opcional una ref con `scrollToIndex(index)`
+  y el callback `onVisibleIndexChange(index)`; el scroll es interno al
+  componente y por eso el índice lateral usa esa API en vez de `scrollIntoView`.
 
 ## Fondo y componentes visuales
 

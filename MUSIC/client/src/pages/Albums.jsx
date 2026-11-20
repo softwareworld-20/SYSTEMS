@@ -131,7 +131,12 @@ export default function Albums() {
           )}
         </div>
 
-        <Player track={activeTrack} onClose={() => setActiveId(null)} />
+        <Player
+          track={activeTrack}
+          queue={albumTracks}
+          onSelectTrack={setActiveId}
+          onClose={() => setActiveId(null)}
+        />
       </div>
     );
   }

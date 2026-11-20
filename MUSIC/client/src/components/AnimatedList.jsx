@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   CodeIcon,
@@ -102,9 +102,10 @@ const FADE_MASK = (() => {
 
 const size = value => (typeof value === 'number' ? `${value}px` : value);
 
-const AnimatedList = ({
+const AnimatedList = forwardRef(function AnimatedList({
   items = DEFAULT_ITEMS,
   onItemSelect,
+  onVisibleIndexChange,
   renderItem,
   initialSelectedIndex = -1,
   selectOnHover = true,
@@ -126,7 +127,7 @@ const AnimatedList = ({
   className = '',
   itemClassName = '',
   style
-}) => {
+}, ref) {
   const rootRef = useRef(null);
   const viewportRef = useRef(null);
   const trackRef = useRef(null);
@@ -141,6 +142,7 @@ const AnimatedList = ({
   const settings = {
     items,
     onItemSelect,
+    onVisibleIndexChange,
     selected,
     selectOnHover,
     enableArrowNavigation,
@@ -153,6 +155,27 @@ const AnimatedList = ({
   };
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+
+  // API opcional para que un índice externo (p. ej. alfabeto) pueda desplazar
+  // el viewport interno sin recrear la lista ni perder el estado de selección.
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToIndex(index, behavior = 'smooth') {
+        const viewport = viewportRef.current;
+        const track = trackRef.current;
+        const item = itemRefs.current[index];
+        if (!viewport || !track || !item) return;
+        const top = track.offsetTop + item.offsetTop;
+        const margin = Math.min(
+          showGradients ? Math.max(12, fadeSize) : 12,
+          Math.max(0, (viewport.clientHeight - item.offsetHeight) / 2)
+        );
+        viewport.scrollTo({ top: Math.max(0, top - margin), behavior });
+      }
+    }),
+    [fadeSize, showGradients]
+  );
 
   useIsomorphicLayoutEffect(() => {
     const root = rootRef.current;
@@ -176,6 +199,7 @@ const AnimatedList = ({
     let pointer = [0, 0];
     let raf = 0;
     let last = 0;
+    let lastReported = -1;
 
     const mode = () => {
       const chosen = settingsRef.current.animation;
@@ -276,6 +300,23 @@ const AnimatedList = ({
     const measure = () => {
       const offset = track.offsetTop;
       boxes = itemRefs.current.map(item => (item ? [offset + item.offsetTop, item.offsetHeight] : null));
+      reportVisible();
+    };
+
+    const reportVisible = () => {
+      const callback = settingsRef.current.onVisibleIndexChange;
+      if (!callback) return;
+      const top = viewport.scrollTop;
+      let index = 0;
+      for (let i = 0; i < boxes.length; i++) {
+        const box = boxes[i];
+        if (!box) continue;
+        if (box[0] - top > 24) break;
+        index = i;
+      }
+      if (index === lastReported) return;
+      lastReported = index;
+      callback(index);
     };
 
     const reveal = entrance => {
@@ -358,6 +399,7 @@ const AnimatedList = ({
     const onScroll = () => {
       updateFades();
       reveal(false);
+      reportVisible();
     };
 
     const onKey = event => {
@@ -545,6 +587,6 @@ const AnimatedList = ({
       {frame && <span className="animated-list__frame-rim" aria-hidden="true" />}
     </div>
   );
-};
+});
 
 export default AnimatedList;

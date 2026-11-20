@@ -57,6 +57,158 @@
   transform: scale(0.95);
 }
 
+/* Buscador junto al botón de añadir */
+.playlist__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 320px;
+  padding: 0 0.7rem;
+  border: 1px solid rgba(0, 157, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(0, 20, 35, 0.55);
+  color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.playlist__search:focus-within {
+  border-color: var(--blue-bell);
+  background: rgba(0, 20, 35, 0.8);
+}
+
+.playlist__search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.playlist__search input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.playlist__search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.playlist__search-clear {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+.playlist__search-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+.playlist__clear-search {
+  display: inline-flex;
+  margin-left: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgba(0, 157, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(0, 157, 255, 0.1);
+  color: var(--white);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.playlist__clear-search:hover {
+  background: rgba(0, 157, 255, 0.22);
+}
+
+/* Lista + índice alfabético lateral */
+.playlist__content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.playlist__list {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.playlist__alphabet {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  padding: 0.35rem 0.25rem;
+  border: 1px solid rgba(0, 157, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(0, 20, 35, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.playlist__letter {
+  width: 20px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font: inherit;
+  font-size: 0.58rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.playlist__letter:disabled {
+  color: rgba(255, 255, 255, 0.22);
+  cursor: default;
+}
+
+.playlist__letter:hover:not(:disabled) {
+  background: rgba(0, 157, 255, 0.2);
+  color: var(--white);
+}
+
+.playlist__letter--active,
+.playlist__letter--active:hover:not(:disabled) {
+  background: var(--blue-bell);
+  color: #001018;
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .playlist__header {
+    flex-wrap: wrap;
+  }
+
+  .playlist__search {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
 .playlist__empty {
   text-align: center;
   color: rgba(255, 255, 255, 0.6);
@@ -202,6 +354,72 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+.upload-modal--batch {
+  width: min(100%, 640px);
+}
+
+/* Subida múltiple: archivos a la izquierda, progreso a la derecha */
+.upload-batch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.upload-batch__files {
+  min-width: 0;
+}
+
+.upload-batch__count {
+  margin: 0 0 0.6rem;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.upload-batch__list {
+  max-height: 190px;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  overflow-y: auto;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.upload-batch__status {
+  min-width: 0;
+  padding-top: 0.35rem;
+  color: var(--blue-bell);
+}
+
+.upload-error {
+  margin: 0.75rem 0 0;
+  color: #ff9b9b;
+  font-size: 0.8rem;
+}
+
+.upload-batch__retry {
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(0, 157, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(0, 157, 255, 0.1);
+  color: var(--white);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.upload-batch__retry:hover {
+  background: rgba(0, 157, 255, 0.2);
+}
+
+@media (max-width: 560px) {
+  .upload-batch {
+    grid-template-columns: 1fr;
   }
 }
 

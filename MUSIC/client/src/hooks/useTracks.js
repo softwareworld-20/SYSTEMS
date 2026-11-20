@@ -1,6 +1,7 @@
 // client/src/hooks/useTracks.js
 import { useCallback, useEffect, useState } from "react";
 import { deleteTrackFile, saveTrackFile } from "../trackFiles.js";
+import { audioMime, normalizeAudio } from "../audio.js";
 
 const KEY = "listen-u:tracks";
 
@@ -10,6 +11,23 @@ const load = () => {
   } catch {
     return [];
   }
+};
+
+const persistTrack = async track => {
+  const id = crypto.randomUUID();
+  const { file, ...meta } = track;
+
+  let stored = false;
+  if (file) {
+    try {
+      await saveTrackFile(id, normalizeAudio(file));
+      stored = true;
+    } catch (error) {
+      console.warn("No se pudo guardar el audio de la canción.", error);
+    }
+  }
+
+  return { ...meta, id, mime: file ? audioMime(file) : null, hasFile: stored };
 };
 
 export function useTracks() {
@@ -24,21 +42,19 @@ export function useTracks() {
   }, [tracks]);
 
   const addTrack = useCallback(async track => {
-    const id = crypto.randomUUID();
-    const { file, ...meta } = track;
+    const stored = await persistTrack(track);
+    setTracks(prev => [stored, ...prev]);
+    return stored.id;
+  }, []);
 
-    let stored = false;
-    if (file) {
-      try {
-        await saveTrackFile(id, file);
-        stored = true;
-      } catch (error) {
-        console.warn("No se pudo guardar el audio de la canción.", error);
-      }
+  // Subida múltiple: se guardan en el orden elegido y se insertan juntas.
+  const addTracks = useCallback(async items => {
+    const stored = [];
+    for (const item of items) {
+      stored.push(await persistTrack(item));
     }
-
-    setTracks(prev => [{ ...meta, id, hasFile: stored }, ...prev]);
-    return id;
+    setTracks(prev => [...stored, ...prev]);
+    return stored.map(track => track.id);
   }, []);
 
   const updateTrack = useCallback((id, patch) => {
@@ -53,5 +69,5 @@ export function useTracks() {
     deleteTrackFile(id).catch(() => {});
   }, []);
 
-  return { tracks, addTrack, updateTrack, removeTrack };
+  return { tracks, addTrack, addTracks, updateTrack, removeTrack };
 }

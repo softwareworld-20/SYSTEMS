@@ -39,12 +39,12 @@ function run(mode, action) {
   );
 }
 
-/** Saves the MP3 blob under the track id. */
+/** Saves the audio blob (any supported format) under the track id. */
 export function saveTrackFile(id, file) {
   return run("readwrite", store => store.put(file, id));
 }
 
-/** Returns the stored MP3 blob, or undefined when it is not available. */
+/** Returns the stored audio blob, or undefined when it is not available. */
 export function getTrackFile(id) {
   return run("readonly", store => store.get(id));
 }

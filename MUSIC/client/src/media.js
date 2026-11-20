@@ -1,9 +1,10 @@
 // client/src/media.js
+import { normalizeAudio } from "./audio.js";
 
-/** Reads the duration of a local audio/video file in seconds. */
+/** Reads the duration of a local audio file in seconds. */
 export function readAudioDuration(file) {
   return new Promise(resolve => {
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(normalizeAudio(file));
     const audio = new Audio();
     let settled = false;
 

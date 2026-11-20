@@ -3,17 +3,20 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
   MusicNote01Icon,
+  NextIcon,
   PauseIcon,
   PlayIcon,
+  PreviousIcon,
   VolumeHighIcon,
   VolumeLowIcon,
 } from "@hugeicons/core-free-icons";
 import ElasticSlider from "./ElasticSlider.jsx";
 import { getTrackFile } from "../trackFiles.js";
+import { normalizeAudio } from "../audio.js";
 import { formatDuration } from "../media.js";
 import "./Player.css";
 
-export default function Player({ track, onClose }) {
+export default function Player({ track, queue = [], onSelectTrack, onClose }) {
   const [displayed, setDisplayed] = useState(track);
   const [src, setSrc] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -26,6 +29,10 @@ export default function Player({ track, onClose }) {
   const audioRef = useRef(null);
   const urlRef = useRef(null);
   const open = Boolean(track);
+  const queueIndex = displayed ? queue.findIndex(item => item.id === displayed.id) : -1;
+  const previousTrack = queueIndex > 0 ? queue[queueIndex - 1] : null;
+  const nextTrack = queueIndex >= 0 ? queue[queueIndex + 1] ?? null : null;
+  const hasQueue = queue.length > 1;
 
   useEffect(() => {
     if (track) setDisplayed(track);
@@ -62,7 +69,7 @@ export default function Player({ track, onClose }) {
           return;
         }
 
-        const url = URL.createObjectURL(file);
+        const url = URL.createObjectURL(normalizeAudio(file));
         urlRef.current = url;
         setSrc(url);
         setLoading(false);
@@ -94,7 +101,9 @@ export default function Player({ track, onClose }) {
     const audio = audioRef.current;
     if (!audio) return;
     if (open && src) {
-      audio.play().catch(() => {});
+      audio.play().catch(() => {
+        setError("El navegador bloqueó la reproducción automática. Pulsa reproducir para continuar.");
+      });
     } else if (!open) {
       audio.pause();
     }
@@ -131,6 +140,11 @@ export default function Player({ track, onClose }) {
   };
 
   const handleEnded = () => {
+    // Cola: al terminar, pasamos a la siguiente canción del orden de la lista.
+    if (nextTrack) {
+      onSelectTrack?.(nextTrack.id);
+      return;
+    }
     const audio = audioRef.current;
     if (audio) audio.currentTime = 0;
     setCurrentTime(0);
@@ -162,10 +176,20 @@ export default function Player({ track, onClose }) {
         }}
         onPause={() => setPlaying(false)}
         onEnded={handleEnded}
+        onError={() => {
+          if (src) {
+            setError("Este formato de audio no es compatible con este navegador.");
+          }
+        }}
       />
 
       <header className="player__header">
         <span className="player__kicker">Reproduciendo</span>
+        {hasQueue && queueIndex >= 0 ? (
+          <span className="player__queue-position">
+            {queueIndex + 1} / {queue.length}
+          </span>
+        ) : null}
         <button
           type="button"
           className="player__close"
@@ -222,6 +246,17 @@ export default function Player({ track, onClose }) {
       </div>
 
       <div className="player__controls">
+        {hasQueue ? (
+          <button
+            type="button"
+            className="player__skip"
+            onClick={() => previousTrack && onSelectTrack?.(previousTrack.id)}
+            disabled={!previousTrack}
+            aria-label="Canción anterior"
+          >
+            <HugeiconsIcon icon={PreviousIcon} size={22} strokeWidth={1.8} />
+          </button>
+        ) : null}
         <button
           type="button"
           className="player__toggle"
@@ -235,6 +270,17 @@ export default function Player({ track, onClose }) {
             strokeWidth={2}
           />
         </button>
+        {hasQueue ? (
+          <button
+            type="button"
+            className="player__skip"
+            onClick={() => nextTrack && onSelectTrack?.(nextTrack.id)}
+            disabled={!nextTrack}
+            aria-label="Canción siguiente"
+          >
+            <HugeiconsIcon icon={NextIcon} size={22} strokeWidth={1.8} />
+          </button>
+        ) : null}
       </div>
 
       <div className="player__volume">
