@@ -129,7 +129,7 @@ export default function Albums() {
               animation="pop"
               theme="dark"
               width={560}
-              maxHeight={520}
+              maxHeight="min(520px, 56svh)"
               radius={14}
               gap={6}
               stagger={0.04}

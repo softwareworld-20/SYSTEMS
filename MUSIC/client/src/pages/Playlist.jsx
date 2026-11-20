@@ -314,7 +314,7 @@ export default function Playlist() {
               animation="pop"
               theme="dark"
               width={560}
-              maxHeight={470}
+              maxHeight="min(470px, 52svh)"
               radius={14}
               gap={6}
               stagger={0.05}

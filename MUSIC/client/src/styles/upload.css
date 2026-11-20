@@ -815,7 +815,7 @@
 .albums__menu {
   position: relative;
   flex: 1;
-  min-height: 520px;
+  min-height: min(520px, 62svh);
 }
 
 /* El menú se ancla al contenedor, sin depender de porcentajes */
@@ -909,4 +909,132 @@
 .album-detail__body {
   display: flex;
   justify-content: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Teléfonos: menos padding lateral e índice deslizable                */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 620px) {
+  .playlist {
+    padding: 0.4rem 0.2rem calc(1rem + env(safe-area-inset-bottom));
+    gap: 0.9rem;
+  }
+
+  .playlist__header {
+    gap: 0.6rem;
+    margin-bottom: 0;
+  }
+
+  .playlist__title {
+    font-size: 1.5rem;
+  }
+
+  .playlist__content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .playlist__alphabet {
+    flex-direction: row;
+    gap: 2px;
+    padding: 0.3rem;
+    border-radius: 14px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .playlist__alphabet::-webkit-scrollbar {
+    display: none;
+  }
+
+  .playlist__letter {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    font-size: 0.66rem;
+  }
+
+  .track {
+    gap: 0.5rem;
+  }
+
+  .track__check {
+    margin-right: 0;
+  }
+
+  .track__cover {
+    width: 36px;
+    height: 36px;
+  }
+
+  .track__play {
+    width: 36px;
+    height: 36px;
+  }
+
+  .playlist__bulk {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .playlist__title {
+    font-size: 1.35rem;
+  }
+
+  .track__cover {
+    width: 32px;
+    height: 32px;
+  }
+
+  .track__duration {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Modal como hoja inferior: deja sitio al teclado y a los pulgares */
+  .upload-backdrop {
+    align-items: flex-end;
+    padding: 0.75rem;
+  }
+
+  .upload-modal {
+    width: 100%;
+    max-height: calc(100svh - 1.5rem);
+    border-radius: 20px 20px 14px 14px;
+    padding: 1.25rem 1.1rem calc(1.25rem + env(safe-area-inset-bottom));
+  }
+
+  .upload-drop {
+    min-height: 150px;
+    padding: 1.25rem 1rem;
+  }
+
+  .upload-form__actions {
+    flex-wrap: wrap;
+  }
+
+  .upload-form__actions button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  .upload-batch__list {
+    max-height: 140px;
+  }
+}
+
+@media (max-width: 640px) {
+  .album-detail {
+    padding: 0.4rem 0.2rem calc(1rem + env(safe-area-inset-bottom));
+    gap: 0.75rem;
+  }
+
+  .album-detail__back {
+    width: 44px;
+    height: 44px;
+  }
 }

@@ -20,6 +20,8 @@
 
 html {
   background: var(--black);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -788,6 +790,7 @@ body {
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.9);
   animation: profile-menu-in 0.18s ease-out;
+  z-index: 20;
 }
 
 @keyframes profile-menu-in {
@@ -835,12 +838,63 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* ------------------------------------------------------------------ */
+/* Móviles: el perfil va en su propia fila para no tapar el menú       */
+/* ------------------------------------------------------------------ */
+
 @media (max-width: 640px) {
+  .layout__header {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.55rem;
+    padding: calc(0.6rem + env(safe-area-inset-top)) 0.9rem 0.4rem;
+  }
+
+  .layout__header .pill-nav {
+    align-self: center;
+  }
+
+  .layout__profile {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    align-self: flex-end;
+  }
+
   .layout__profile-trigger {
-    padding: 0.35rem;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0.3rem;
   }
 
   .layout__profile-name {
     display: none;
+  }
+
+  .layout__main {
+    padding: 0.75rem 0.9rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .layout .welcome {
+    padding-top: 0.5rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .coming-soon {
+    padding: 0 0.5rem;
+  }
+
+  .session-check {
+    padding: 0 1rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .layout__header,
+  .layout__main {
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
   }
 }
