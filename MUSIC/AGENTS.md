@@ -37,8 +37,9 @@ inventes comandos. Verifica con `npm run build` y un `GET /api/health`.
   `npm start` y reinicia el servidor si el `dist` aparece después.
 - El proxy `/api` de `client/vite.config.js` apunta fijo a `http://localhost:4200`.
   Si cambias `PORT`, actualiza también el proxy.
-- Sin autenticación ni base de datos en esta app: todo el estado musical vive
-  en el navegador.
+- No hay backend de autenticación ni base de datos: el login es una compuerta
+  de demostración en el cliente (`auth.js`) y todo el estado musical vive en el
+  navegador.
 
 ## Frontend (React 19 + Vite + react-router-dom 7)
 
@@ -46,26 +47,42 @@ inventes comandos. Verifica con `npm run build` y un `GET /api/health`.
   (`PillNav.css`, `DarkVeil.css`, `AnimatedList.css`, `Player.css`,
   `ElasticSlider.css`, `InfiniteMenu.css`). Estilos de playlist y modal en
   `client/src/styles/upload.css`, importados por `Playlist.jsx` y `Albums.jsx`.
+  La pantalla de login tiene `client/src/styles/login.css`, importado por
+  `pages/Login.jsx`.
 - Copia de UI siempre en **español**; `client/index.html` usa `<html lang="es">`.
 - Iconos con `@hugeicons/react` + `@hugeicons/core-free-icons`. **No hay MUI** en
   esta app (eso es solo el admin de `caridad/`).
 - Paleta: `--blue-bell: #009dff`, `--blue: #0d00fd`, `--black`, `--white`.
   `--blue` solo para halos/glow/haze, nunca como color de texto. Tipografías:
-  `--font-display` = Black Ops One, `--font-body` = Sora.
+  `--font-display` = Playfair Display (Google Fonts), `--font-body` = Sora.
 
 ### Rutas
 
-Todas están anidadas en `<Route element={<NavLayout />}>`:
+`/login` está fuera del layout. El resto está detrás de `<RequireAuth />` y
+anidado en `<Route element={<NavLayout />}>`:
 
 | Ruta | Estado real |
 | --- | --- |
+| `/login` | Formulario de acceso; mitad izquierda con el fondo WebGL, mitad derecha con el formulario. |
 | `/` | Welcome (`pages/Welcome.jsx`). |
-| `/playlist` | Funcional: subir, listar, seleccionar, borrar y reproducir. |
+| `/playlist` | Funcional: subir, listar, seleccionar, borrar, editar y reproducir. |
 | `/albums` | Funcional: `InfiniteMenu` + detalle de álbum con `AnimatedList`. |
 | `/settings` | `ComingSoon` ("Configura ListenU a tu manera. Próximamente."). |
 | `*` | `ComingSoon` de 404. |
 
-`NavLayout` monta el `<PillNav>` con enlaces de React Router y el fondo WebGL.
+`NavLayout` monta el `<PillNav>` con enlaces de React Router, el fondo WebGL y
+un badge de perfil (`SamuelS`) en la esquina superior derecha: al pulsarlo se
+despliega un menú con **Cerrar sesión**.
+Los ajustes del shader están en `components/veilProps.js` y los comparten
+`NavLayout` y `Login`.
+
+### Acceso de demostración
+
+- `auth.js` define `SamuelS` / `Samu3l!9` (8 caracteres, ninguno repetido). No
+  es seguridad real: está a la vista en el bundle (no se muestra en el login).
+- `signIn` guarda la marca de sesión en `sessionStorage` (`listen-u:session`,
+  con respaldo en memoria) y `RequireAuth` redirige a `/login` si no hay sesión.
+  `signOut` limpia esa marca y el menú del perfil vuelve a `/login`.
 
 ## Datos y persistencia (solo cliente)
 
@@ -75,6 +92,7 @@ Todas están anidadas en `<Route element={<NavLayout />}>`:
 | Blobs MP3 | `trackFiles.js` | IndexedDB `listen-u`, store `track-files` (clave = id del track) |
 | Sugerencias de artista/álbum | `components/UploadModal.jsx` | localStorage `listen-u:artists`, `listen-u:albums` |
 | Carátula/descripción de álbum | `albumMeta.js` | localStorage `listen-u:album-meta` |
+| Sesión de demo | `auth.js` | sessionStorage `listen-u:session` |
 
 - Cada track tiene `id = crypto.randomUUID()` y un flag `hasFile`. Los metadatos
   y el blob se guardan por separado; si falla IndexedDB, el track se añade igual

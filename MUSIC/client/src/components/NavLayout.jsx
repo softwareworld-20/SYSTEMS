@@ -1,7 +1,16 @@
 // client/src/components/NavLayout.jsx
-import { Outlet, useLocation, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  UserIcon,
+  Logout01Icon,
+  ArrowDown01Icon,
+} from "@hugeicons/core-free-icons";
 import PillNav from "./PillNav.jsx";
 import DarkVeil from "./DarkVeil.jsx";
+import { VEIL_PROPS } from "./veilProps.js";
+import { signOut } from "../auth.js";
 
 const ITEMS = [
   { label: "Inicio", href: "/" },
@@ -17,27 +26,43 @@ const RouterLink = ({ href, children, ...rest }) => (
 
 export default function NavLayout() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!profileOpen) return undefined;
+
+    const onPointerDown = event => {
+      if (!profileRef.current?.contains(event.target)) setProfileOpen(false);
+    };
+    const onKeyDown = event => {
+      if (event.key === "Escape") setProfileOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [profileOpen]);
+
+  const handleLogout = () => {
+    signOut();
+    setProfileOpen(false);
+    navigate("/login", { replace: true });
+  };
 
   return (
     <>
       {/* Fondo WebGL fijo */}
       <div className="veil-background" aria-hidden="true">
-        <DarkVeil
-          color="#009dff"
-          speed={0.5}
-          scale={1.1}
-          flow={1}
-          warp={0.2}
-          sheen={0.2}
-          glow={0.6}
-          brightness={1}
-          grain={0.03}
-          quality={0.6}
-          fade={0.15}
-          mouseInteraction
-          mouseStrength={1.2}
-          intro
-        />
+        <DarkVeil {...VEIL_PROPS} />
       </div>
 
       <div className="layout">
@@ -58,6 +83,42 @@ export default function NavLayout() {
             collapse="auto"
             intro
           />
+
+          <div className="layout__profile" ref={profileRef}>
+            <button
+              type="button"
+              className="layout__profile-trigger"
+              onClick={() => setProfileOpen(open => !open)}
+              aria-haspopup="menu"
+              aria-expanded={profileOpen}
+              aria-label="Opciones del perfil de SamuelS"
+            >
+              <span className="layout__profile-avatar" aria-hidden="true">
+                <HugeiconsIcon icon={UserIcon} size={17} strokeWidth={1.8} />
+              </span>
+              <span className="layout__profile-name">SamuelS</span>
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                size={14}
+                strokeWidth={1.8}
+                className="layout__profile-chevron"
+              />
+            </button>
+
+            {profileOpen && (
+              <div className="layout__profile-menu" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="layout__profile-logout"
+                  onClick={handleLogout}
+                >
+                  <HugeiconsIcon icon={Logout01Icon} size={16} strokeWidth={1.8} />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         <main className="layout__main">
