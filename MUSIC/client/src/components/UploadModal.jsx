@@ -33,7 +33,8 @@ const saveList = (key, list) => {
 
 const baseTitle = file => file.name.replace(/\.mp3$/i, "");
 
-export default function UploadModal({ open, onClose, onSaved }) {
+export default function UploadModal({ open, onClose, onSaved, onUpdated, track = null }) {
+  const editing = Boolean(track);
   const [file, setFile] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [dragging, setDragging] = useState(false);
@@ -59,8 +60,27 @@ export default function UploadModal({ open, onClose, onSaved }) {
       // Recargar sugerencias cada vez que se abre el modal
       setArtists(loadList(ARTISTS_KEY));
       setAlbums(loadList(ALBUMS_KEY));
+      setDragging(false);
+      setReading(false);
+      setSaving(false);
+
+      if (track) {
+        // Modo edición: rellenamos el formulario con la canción guardada.
+        setFile(null);
+        setForm({
+          title: track.title || "",
+          artist: track.artist === "Artista desconocido" ? "" : track.artist || "",
+          album: track.album === "—" ? "" : track.album || "",
+          cover: track.cover || null,
+        });
+        setDuration(track.duration ?? null);
+      } else {
+        setFile(null);
+        setForm(EMPTY);
+        setDuration(null);
+      }
     }
-  }, [open]);
+  }, [open, track]);
 
   useEffect(() => {
     if (!open) return;
@@ -120,10 +140,11 @@ export default function UploadModal({ open, onClose, onSaved }) {
 
   const submit = async e => {
     e.preventDefault();
-    if (!file || reading || saving) return;
+    if ((!editing && !file) || reading || saving) return;
 
     setSaving(true);
     try {
+      const title = form.title.trim() || (editing ? track.title : baseTitle(file));
       const artist = form.artist.trim() || "Artista desconocido";
       const album = form.album.trim() || "—";
 
@@ -135,17 +156,22 @@ export default function UploadModal({ open, onClose, onSaved }) {
         setAlbums(prev => saveList(ALBUMS_KEY, [...prev, album]));
       }
 
-      await onSaved({
-        title: form.title.trim() || baseTitle(file),
-        artist,
-        album,
-        cover: form.cover,
-        duration,
-        fileName: file.name,
-        size: file.size,
-        addedAt: Date.now(),
-        file,
-      });
+      if (editing) {
+        // El audio, el id y la duración se conservan; solo se corrigen los datos.
+        await onUpdated(track.id, { title, artist, album, cover: form.cover });
+      } else {
+        await onSaved({
+          title,
+          artist,
+          album,
+          cover: form.cover,
+          duration,
+          fileName: file.name,
+          size: file.size,
+          addedAt: Date.now(),
+          file,
+        });
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -161,16 +187,16 @@ export default function UploadModal({ open, onClose, onSaved }) {
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Añadir música"
+        aria-label={editing ? "Editar canción" : "Añadir música"}
       >
         <header className="upload-modal__header">
-          <h2>Añadir música</h2>
+          <h2>{editing ? "Editar canción" : "Añadir música"}</h2>
           <button type="button" onClick={onClose} aria-label="Cerrar">
             ✕
           </button>
         </header>
 
-        {!file && (
+        {!file && !editing && (
           <div
             className={`upload-drop${dragging ? " upload-drop--over" : ""}`}
             role="button"
@@ -207,11 +233,15 @@ export default function UploadModal({ open, onClose, onSaved }) {
           </p>
         )}
 
-        {file && !reading && (
+        {(file || editing) && !reading && (
           <form className="upload-form" onSubmit={submit}>
             <p className="upload-form__file">
-              <strong>{file.name}</strong> ·{" "}
-              {(file.size / 1024 / 1024).toFixed(2)} MB
+              <strong>{editing ? track.fileName || track.title : file.name}</strong>
+              {editing ? (
+                <span className="upload-form__note"> · El audio no se modifica.</span>
+              ) : (
+                ` · ${(file.size / 1024 / 1024).toFixed(2)} MB`
+              )}
               {duration ? ` · ${formatDuration(duration)}` : ""}
             </p>
 
@@ -286,7 +316,7 @@ export default function UploadModal({ open, onClose, onSaved }) {
                 Cancelar
               </button>
               <button type="submit" className="primary" disabled={saving}>
-                {saving ? "Guardando…" : "Guardar"}
+                {saving ? "Guardando…" : editing ? "Guardar cambios" : "Guardar"}
               </button>
             </footer>
           </form>

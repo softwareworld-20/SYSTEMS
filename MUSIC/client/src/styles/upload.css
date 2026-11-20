@@ -290,6 +290,10 @@
   color: var(--white);
 }
 
+.upload-form__note {
+  color: rgba(255, 255, 255, 0.45);
+}
+
 .upload-form label {
   display: flex;
   flex-direction: column;
@@ -502,6 +506,7 @@
 /* Barra de acciones masivas (igual que antes) */
 .playlist__bulk {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   width: 100%;
@@ -523,6 +528,7 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
+.playlist__bulk-edit,
 .playlist__bulk-delete,
 .playlist__bulk-cancel {
   display: inline-flex;
@@ -536,6 +542,23 @@
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.playlist__bulk-edit {
+  background: rgba(0, 157, 255, 0.14);
+  border-color: rgba(0, 157, 255, 0.45);
+  color: var(--white);
+}
+
+.playlist__bulk-edit:hover:not(:disabled) {
+  background: rgba(0, 157, 255, 0.26);
+  border-color: var(--blue-bell);
+  transform: translateY(-1px);
+}
+
+.playlist__bulk-edit:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .playlist__bulk-delete {

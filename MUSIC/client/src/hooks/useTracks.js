@@ -41,10 +41,17 @@ export function useTracks() {
     return id;
   }, []);
 
+  const updateTrack = useCallback((id, patch) => {
+    // El blob sigue en IndexedDB con el mismo id: solo cambian los metadatos.
+    setTracks(prev =>
+      prev.map(track => (track.id === id ? { ...track, ...patch } : track))
+    );
+  }, []);
+
   const removeTrack = useCallback(id => {
     setTracks(prev => prev.filter(track => track.id !== id));
     deleteTrackFile(id).catch(() => {});
   }, []);
 
-  return { tracks, addTrack, removeTrack };
+  return { tracks, addTrack, updateTrack, removeTrack };
 }

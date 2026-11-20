@@ -1,7 +1,12 @@
 // client/src/pages/Playlist.jsx
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MusicNote01Icon, PlayIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import {
+  MusicNote01Icon,
+  PlayIcon,
+  Delete02Icon,
+  PencilEdit02Icon,
+} from "@hugeicons/core-free-icons";
 import AnimatedList from "../components/AnimatedList.jsx";
 import UploadModal from "../components/UploadModal.jsx";
 import Player from "../components/Player.jsx";
@@ -10,12 +15,14 @@ import { formatDuration } from "../media.js";
 import "../styles/upload.css";
 
 export default function Playlist() {
-  const { tracks, addTrack, removeTrack } = useTracks();
+  const { tracks, addTrack, updateTrack, removeTrack } = useTracks();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [activeId, setActiveId] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
 
   const activeTrack = tracks.find(track => track.id === activeId) ?? null;
+  const editingTrack = tracks.find(track => track.id === editingId) ?? null;
 
   const openPlayer = track => setActiveId(track.id);
 
@@ -30,6 +37,18 @@ export default function Playlist() {
   };
 
   const clearSelection = () => setSelected(new Set());
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    setEditingId(null);
+  }, []);
+
+  const handleEditSelected = () => {
+    if (selected.size !== 1) return;
+    setEditingId([...selected][0]);
+    setModalOpen(true);
+    clearSelection();
+  };
 
   const handleDeleteSelected = () => {
     if (selected.size === 0) return;
@@ -101,7 +120,10 @@ export default function Playlist() {
         <button
           type="button"
           className="playlist__add"
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+            setEditingId(null);
+            setModalOpen(true);
+          }}
           aria-label="Añadir música"
         >
           +
@@ -114,6 +136,20 @@ export default function Playlist() {
           <span className="playlist__bulk-count">
             {selected.size} seleccionada{selected.size === 1 ? "" : "s"}
           </span>
+          <button
+            type="button"
+            className="playlist__bulk-edit"
+            onClick={handleEditSelected}
+            disabled={selected.size !== 1}
+            title={
+              selected.size === 1
+                ? "Editar la canción seleccionada"
+                : "Selecciona una sola canción para editar"
+            }
+          >
+            <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={1.8} />
+            Editar
+          </button>
           <button
             type="button"
             className="playlist__bulk-delete"
@@ -160,8 +196,10 @@ export default function Playlist() {
 
       <UploadModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         onSaved={addTrack}
+        onUpdated={updateTrack}
+        track={editingTrack}
       />
 
       <Player track={activeTrack} onClose={() => setActiveId(null)} />
