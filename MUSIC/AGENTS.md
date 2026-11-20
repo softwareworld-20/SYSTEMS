@@ -8,7 +8,7 @@ monorepo: ante un conflicto, manda **el código fuente de `MUSIC/`**.
 ## Fuentes de verdad
 
 - `client/src/App.jsx` y `client/src/components/NavLayout.jsx` → rutas y layout.
-- `client/src/hooks/useTracks.js`, `trackFiles.js`, `albumMeta.js` → persistencia.
+- `client/src/api/tracks.js` + `client/src/hooks/useTracks.js` → persistencia vía API.
 - `server/src/index.js` → API y estáticos.
 
 **`MUSIC/README.md` está obsoleto**: describe una welcome sin router, con fondo
@@ -37,9 +37,61 @@ inventes comandos. Verifica con `npm run build` y un `GET /api/health`.
   `npm start` y reinicia el servidor si el `dist` aparece después.
 - El proxy `/api` de `client/vite.config.js` apunta fijo a `http://localhost:4200`.
   Si cambias `PORT`, actualiza también el proxy.
-- No hay backend de autenticación ni base de datos: el login es una compuerta
-  de demostración en el cliente (`auth.js`) y todo el estado musical vive en el
-  navegador.
+- La autenticación y la persistencia son reales: el cliente usa PostgreSQL a
+  través de la API (`client/src/api/tracks.js`). No queda estado musical en el
+  navegador; solo las sugerencias de artista/álbum del formulario siguen en
+  `localStorage` como comodidad de UI.
+
+## Base de datos (migración en curso)
+
+- PostgreSQL 18 local: base `db_music` y rol de DB `music_user` (no confundir con
+  el usuario de la app `SamuelS`).
+- `MUSIC/.env` está ignorado por git; plantilla en `.env.example`. Los scripts
+  del server cargan `../.env` con `node --env-file` (ruta relativa a `server/`).
+- `pg` vive en el workspace `server`. `server/src/db.js` exporta `pool`, `query`
+  y `checkDb`; nunca loguees `DATABASE_URL` porque contiene la contraseña.
+- Esquema versionado en `server/db/migrations/001_init.sql`: `app_users` (demo
+  `SamuelS` con hash bcrypt de pgcrypto), `tracks` (metadatos + `data bytea`) y
+  `album_meta`. Aplicar con
+  `psql "$DATABASE_URL" -f server/db/migrations/001_init.sql`.
+- Decisión de arquitectura: el audio se guarda en `BYTEA` para poder escucharlo
+  desde laptop o celular; así un único `pg_dump` incluye esquema, datos y audio.
+- `GET /api/health` añade `"db": "ok" | "error"` tras ejecutar `SELECT 1`.
+
+### API de autenticación
+
+- `server/src/auth.js` firma tokens HMAC con SHA-256 y TTL de 8 h usando
+  `AUTH_SECRET` de `.env`. Si falta, usa un secreto efímero (las sesiones se
+  invalidan al reiniciar) y avisa por consola.
+- `server/src/requireAuth.js` exige `Authorization: Bearer <token>` y deja el
+  usuario en `req.user`; responde 401 si falta o es inválido/caducado.
+- `POST /api/auth/login` comprueba la contraseña contra `app_users` con
+  `crypt()` de pgcrypto y devuelve `{ token, username, expiresIn }`.
+  `GET /api/auth/session` devuelve `{ user }`.
+- Registradas en `server/src/index.js` **antes** del 404 de `/api`. El cliente
+  ya usa este login: `client/src/auth.js` guarda el token en sessionStorage
+  (`listen-u:token`, con respaldo en memoria) y el usuario en `listen-u:user`.
+- Cambiaron los scripts del server (`--env-file=../.env`), así que hay que
+  reiniciar un `npm run dev` que ya estuviera corriendo.
+
+### API de canciones
+
+- `server/src/routes/tracks.js` está montado en `/api/tracks` detrás de
+  `requireAuth`. Todas las consultas llevan `owner_id = req.user.id`.
+- `GET /api/tracks` devuelve metadatos (sin `data`), ordenados alfabéticamente.
+- `POST /api/tracks` es `multipart/form-data`: campo `files` (hasta 20, máx.
+  100 MB cada uno) y campo opcional `metadata` con un JSON array alineado con
+  los archivos (`title`, `artist`, `album`, `cover`, `duration`). Se insertan
+  todos en una transacción y se guarda el audio en `data bytea` con el MIME
+  normalizado por `server/src/audio.js` (espejo de `client/src/audio.js`).
+- `GET /api/tracks/:id/audio` sirve el `bytea` con el MIME guardado, soporta
+  `Range: bytes=…` (206) y devuelve 404/416 según corresponda.
+- `PATCH /api/tracks/:id` solo toca `title`, `artist`, `album` y `cover`; nunca
+  modifica `id`, duración, tamaño ni audio. `DELETE /api/tracks/:id` responde 204.
+- Los errores de `multer` se convierten a JSON en español (413 si el archivo
+  excede el límite, 400 si se pasa de 20 archivos).
+- `GET /api/albums` devuelve `{ album, cover, description }` por usuario;
+  `PATCH /api/albums` hace upsert de esa fila (carátula/descripción del álbum).
 
 ## Frontend (React 19 + Vite + react-router-dom 7)
 
@@ -77,34 +129,41 @@ despliega un menú con **Cerrar sesión**.
 Los ajustes del shader están en `components/veilProps.js` y los comparten
 `NavLayout` y `Login`.
 
-### Acceso de demostración
+### Acceso
 
-- `auth.js` define `SamuelS` / `Samu3l!9` (8 caracteres, ninguno repetido). No
-  es seguridad real: está a la vista en el bundle (no se muestra en el login).
-- `signIn` guarda la marca de sesión en `sessionStorage` (`listen-u:session`,
-  con respaldo en memoria) y `RequireAuth` redirige a `/login` si no hay sesión.
-  `signOut` limpia esa marca y el menú del perfil vuelve a `/login`.
+- El usuario de la app es `SamuelS` / `Samu3l!9` (8 caracteres, ninguno
+  repetido). La contraseña **no** está en el bundle: se comprueba en el servidor
+  contra el hash bcrypt de `app_users`.
+- `client/src/auth.js` envía `POST /api/auth/login`, guarda el token Bearer en
+  sessionStorage (`listen-u:token`, con respaldo en memoria) y el usuario en
+  `listen-u:user`. `RequireAuth` valida el token con `GET /api/auth/session` al
+  entrar y redirige a `/login` si no es válido.
+- `client/src/api/client.js` añade el header `Authorization` a todas las
+  peticiones; si recibe 401 limpia la sesión y vuelve a `/login`.
+- `signOut` limpia token y usuario; el menú del perfil vuelve a `/login`.
+- El nombre mostrado en el badge sale del token (`currentUser()`), no harcodeado.
 
-## Datos y persistencia (solo cliente)
+## Datos y persistencia
 
-| Dato | Parte | Clave / ubicación |
+| Dato | Parte | Ubicación |
 | --- | --- | --- |
-| Metadatos de canciones | `hooks/useTracks.js` | localStorage `listen-u:tracks` |
-| Blobs de audio | `trackFiles.js` | IndexedDB `listen-u`, store `track-files` (clave = id del track) |
-| Sugerencias de artista/álbum | `components/UploadModal.jsx` | localStorage `listen-u:artists`, `listen-u:albums` |
-| Carátula/descripción de álbum | `albumMeta.js` | localStorage `listen-u:album-meta` |
-| Sesión de demo | `auth.js` | sessionStorage `listen-u:session` |
+| Metadatos y audio de canciones | tabla `tracks` | PostgreSQL `db_music`, columna `data bytea` |
+| Carátula/descripción de álbum | tabla `album_meta` | PostgreSQL `db_music` |
+| Sugerencias de artista/álbum | `components/UploadModal.jsx` | solo UI: localStorage `listen-u:artists`, `listen-u:albums` |
+| Sesión | `auth.js` | sessionStorage `listen-u:token`, `listen-u:user` |
 
-- Cada track tiene `id = crypto.randomUUID()` y un flag `hasFile`. Los metadatos
-  y el blob se guardan por separado; si falla IndexedDB, el track se añade igual
-  con `hasFile: false` y el reproductor mostrará "El audio de esta canción no
-  está disponible.".
-- `addTrack` recibe `{ file, ...meta }`: separa el `File` antes de guardar la
-  metadata en localStorage (nunca guardes el `File` ahí). `addTracks(items)` es
-  la versión múltiple: guarda los blobs en orden y añade todas las canciones de
-  una sola vez.
-- `buildAlbums(tracks)` agrupa por `album`, usa `—` para "Sin álbum" (va al
-  final), y toma la carátula de `albumMeta` o de la primera canción con cover.
+- `client/src/api/tracks.js` es el único puente: `listTracks`, `uploadTracks`,
+  `updateTrack`, `removeTrack`, `fetchTrackAudio`, `listAlbumMeta`,
+  `saveAlbumMeta`. Ningún archivo del cliente usa ya `localStorage` ni
+  IndexedDB para guardar música.
+- `useTracks` carga la lista al montar y expone `loading`/`error`/`reload`.
+  `addTrack` envía un archivo y `addTracks(items)` envía el lote completo en una
+  sola petición `multipart/form-data` con `metadata` alineado.
+- Los ids los genera el servidor con `crypto.randomUUID()`; el track devuelto
+  trae `fileName`, `mime`, `addedAt` y `updatedAt`. Ya no existe el flag `hasFile`.
+- `buildAlbums(tracks, metas)` agrupa por `album`, usa `—` para "Sin álbum" (va
+  al final), y toma la carátula de `album_meta` o de la primera canción con
+  cover.
 
 ## Subida y reproducción
 
@@ -124,23 +183,24 @@ Los ajustes del shader están en `components/veilProps.js` y los comparten
   `motion` (dependencia añadida a `client/package.json`) más `ThoughtLine.css`.
 - El mismo modal sirve para editar: la barra de selección de `Playlist` muestra
   `Editar` (habilitado solo con una canción marcada), pasa `track` al modal y
-  precarga los datos. Guardar llama a `updateTrack(id, patch)`, que conserva
-  `id`, `hasFile`, duración y el blob de IndexedDB; el alta sigue usando
-  `addTrack`.
+  precarga los datos. Guardar llama a `PATCH /api/tracks/:id` vía
+  `updateTrack(id, patch)`, que conserva `id`, duración, tamaño y audio; el alta
+  sigue usando `addTrack`.
 - `audio.js` centraliza `isAudioFile`, `audioMime` y `normalizeAudio`. Los blobs
-  sin MIME (o con MIME de vídeo, típico en `.m4a`) se guardan como `File` con el
-  MIME correcto para que el object URL sea reproducible. El track guarda
-  además el campo `mime`.
+  sin MIME (o con MIME de vídeo, típico en `.m4a`) se envían como `File` con el
+  MIME correcto; el servidor guarda ese MIME normalizado en la columna `mime`.
 - `mp3.js` importa `jsmediatags` de forma diferida al seleccionar el primer
   archivo y lee título/artista/álbum/carátula (ID3 → data URL). En formatos no
   MP3 suele devolver campos vacíos; la subida usa entonces el nombre del
   archivo. No es un error de la app.
 - `media.js` lee la duración con un `<audio>` temporal sobre el blob
   normalizado (revoca el object URL) y formatea `m:ss` / `h:mm:ss`.
-- `Player.jsx` es un drawer lateral derecho: reproduce el blob de IndexedDB
-  mediante object URL normalizado, lo revoca al cambiar de pista y al desmontar,
-  y usa `ElasticSlider` para el volumen. Si el códec no es compatible con el
-  navegador, muestra un error claro en español en vez de fallar en silencio.
+- `Player.jsx` es un drawer lateral derecho: pide el audio a
+  `GET /api/tracks/:id/audio` con el token (`fetch` + `blob()`), crea un object
+  URL, lo revoca al cambiar de pista y al desmontar, y usa `ElasticSlider` para
+  el volumen. Un `<audio src>` directo no sirve porque no puede enviar el header
+  `Authorization`. Si el códec no es compatible, muestra un error claro en
+  español en vez de fallar en silencio.
 - Cola de reproducción: `Player` recibe `queue` y `onSelectTrack`; al terminar
   una pista pasa a la siguiente del orden de la lista (no hace loop al final) y
   muestra controles de anterior/siguiente y la posición `n / total`. `Playlist`

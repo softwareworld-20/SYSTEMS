@@ -1,40 +1,96 @@
 // client/src/auth.js
-// Acceso de demostración: la app no tiene backend, la sesión vive en el navegador.
-export const DEMO_USERNAME = "SamuelS";
-export const DEMO_PASSWORD = "Samu3l!9"; // 8 caracteres, ninguno repetido.
+// Login real contra la API. La sesión se guarda como token Bearer en sessionStorage.
+const TOKEN_KEY = "listen-u:token";
+const USER_KEY = "listen-u:user";
 
-const SESSION_KEY = "listen-u:session";
-let memorySession = null;
+let memoryToken = null;
+let memoryUser = null;
 
-const readSession = () => {
+const read = (key, fallback) => {
   try {
-    return sessionStorage.getItem(SESSION_KEY) ?? memorySession;
+    return sessionStorage.getItem(key) ?? fallback;
   } catch {
-    return memorySession;
+    return fallback;
   }
 };
 
-export const isAuthenticated = () => readSession() === DEMO_USERNAME;
-
-export const signIn = (username, password) => {
-  const valid =
-    username.trim() === DEMO_USERNAME && password === DEMO_PASSWORD;
-  if (!valid) return false;
-
-  memorySession = DEMO_USERNAME;
+const write = (key, value) => {
   try {
-    sessionStorage.setItem(SESSION_KEY, DEMO_USERNAME);
+    if (value === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, value);
   } catch {
-    // Si sessionStorage no está disponible, basta con el valor en memoria.
+    // Con sessionStorage bloqueado basta con el valor en memoria.
   }
-  return true;
 };
+
+export const getToken = () => read(TOKEN_KEY, memoryToken);
+
+export const currentUser = () => {
+  const raw = read(USER_KEY, memoryUser ? JSON.stringify(memoryUser) : null);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+export const isAuthenticated = () => Boolean(getToken());
+
+const setSession = (token, user) => {
+  memoryToken = token;
+  memoryUser = user;
+  write(TOKEN_KEY, token);
+  write(USER_KEY, JSON.stringify(user));
+};
+
+/** Devuelve { ok, user } o { ok: false, error } con un mensaje en español. */
+export async function signIn(username, password) {
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return { ok: false, error: data.error || "Credenciales incorrectas." };
+    }
+
+    const user = { id: data.user?.id, username: data.username };
+    setSession(data.token, user);
+    return { ok: true, user };
+  } catch {
+    return { ok: false, error: "No se pudo conectar con el servidor." };
+  }
+}
+
+/** Comprueba el token al entrar: lo renueva como válido o limpia la sesión. */
+export async function checkSession() {
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    const response = await fetch("/api/auth/session", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      signOut();
+      return false;
+    }
+    const data = await response.json();
+    setSession(token, data.user ?? currentUser());
+    return true;
+  } catch {
+    // Si es un fallo de red, conservamos la sesión local.
+    return false;
+  }
+}
 
 export const signOut = () => {
-  memorySession = null;
-  try {
-    sessionStorage.removeItem(SESSION_KEY);
-  } catch {
-    // Nada que limpiar si sessionStorage no está disponible.
-  }
+  memoryToken = null;
+  memoryUser = null;
+  write(TOKEN_KEY, null);
+  write(USER_KEY, null);
 };

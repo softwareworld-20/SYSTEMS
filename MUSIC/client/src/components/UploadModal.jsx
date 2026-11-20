@@ -306,6 +306,8 @@ export default function UploadModal({
         });
       }
       onClose();
+    } catch (failure) {
+      setError(failure?.message || "No se pudo guardar la canción. Inténtalo de nuevo.");
     } finally {
       setSaving(false);
     }

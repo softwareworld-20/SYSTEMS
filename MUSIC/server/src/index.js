@@ -2,6 +2,11 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import { checkDb } from "./db.js";
+import authRoutes from "./routes/auth.js";
+import tracksRoutes from "./routes/tracks.js";
+import albumsRoutes from "./routes/albums.js";
+import requireAuth from "./requireAuth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 4200;
@@ -11,15 +16,28 @@ const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
+  let db = "ok";
+  try {
+    await checkDb();
+  } catch (error) {
+    db = "error";
+    console.warn("No se pudo conectar con PostgreSQL.", error.message);
+  }
+
   res.json({
     ok: true,
     service: "listen-u",
     name: "ListenU",
     tagline: "OWN VIBES",
     uptime: process.uptime(),
+    db,
   });
 });
+
+app.use("/api/auth", authRoutes);
+app.use("/api/tracks", requireAuth, tracksRoutes);
+app.use("/api/albums", requireAuth, albumsRoutes);
 
 // Cualquier ruta /api no definida arriba responde 404 en JSON.
 // Las rutas nuevas de la API deben registrarse ANTES de este bloque.

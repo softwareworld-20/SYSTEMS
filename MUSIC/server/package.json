@@ -5,10 +5,12 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "dev": "node --watch --env-file=../.env src/index.js",
+    "start": "node --env-file=../.env src/index.js"
   },
   "dependencies": {
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "multer": "^2.5.0",
+    "pg": "^8.23.1"
   }
 }

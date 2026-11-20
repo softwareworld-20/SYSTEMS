@@ -1,73 +1,74 @@
 // client/src/hooks/useTracks.js
+// Estado de las canciones servido por la API; ya no hay localStorage ni IndexedDB.
 import { useCallback, useEffect, useState } from "react";
-import { deleteTrackFile, saveTrackFile } from "../trackFiles.js";
-import { audioMime, normalizeAudio } from "../audio.js";
-
-const KEY = "listen-u:tracks";
-
-const load = () => {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
-
-const persistTrack = async track => {
-  const id = crypto.randomUUID();
-  const { file, ...meta } = track;
-
-  let stored = false;
-  if (file) {
-    try {
-      await saveTrackFile(id, normalizeAudio(file));
-      stored = true;
-    } catch (error) {
-      console.warn("No se pudo guardar el audio de la canción.", error);
-    }
-  }
-
-  return { ...meta, id, mime: file ? audioMime(file) : null, hasFile: stored };
-};
+import {
+  listTracks,
+  uploadTracks,
+  updateTrack as apiUpdateTrack,
+  removeTrack as apiRemoveTrack,
+} from "../api/tracks.js";
 
 export function useTracks() {
-  const [tracks, setTracks] = useState(load);
+  const [tracks, setTracks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await listTracks();
+      setTracks(Array.isArray(list) ? list : []);
+      setError("");
+    } catch (failure) {
+      setError(failure?.message || "No se pudo cargar la lista de canciones.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(tracks));
-    } catch (error) {
-      console.warn("No se pudo guardar la lista de canciones.", error);
-    }
-  }, [tracks]);
-
-  const addTrack = useCallback(async track => {
-    const stored = await persistTrack(track);
-    setTracks(prev => [stored, ...prev]);
-    return stored.id;
+    let alive = true;
+    setLoading(true);
+    listTracks()
+      .then(list => {
+        if (!alive) return;
+        setTracks(Array.isArray(list) ? list : []);
+      })
+      .catch(failure => {
+        if (!alive) return;
+        setError(failure?.message || "No se pudo cargar la lista de canciones.");
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  // Subida múltiple: se guardan en el orden elegido y se insertan juntas.
+  const addTrack = useCallback(async item => {
+    const [created] = await uploadTracks([item]);
+    setTracks(prev => [...prev, created]);
+    return created.id;
+  }, []);
+
+  // Subida múltiple: una sola petición con todos los archivos en orden.
   const addTracks = useCallback(async items => {
-    const stored = [];
-    for (const item of items) {
-      stored.push(await persistTrack(item));
-    }
-    setTracks(prev => [...stored, ...prev]);
-    return stored.map(track => track.id);
+    const created = await uploadTracks(items);
+    setTracks(prev => [...prev, ...created]);
+    return created.map(track => track.id);
   }, []);
 
-  const updateTrack = useCallback((id, patch) => {
-    // El blob sigue en IndexedDB con el mismo id: solo cambian los metadatos.
-    setTracks(prev =>
-      prev.map(track => (track.id === id ? { ...track, ...patch } : track))
-    );
+  const updateTrack = useCallback(async (id, patch) => {
+    const updated = await apiUpdateTrack(id, patch);
+    setTracks(prev => prev.map(track => (track.id === id ? updated : track)));
+    return updated;
   }, []);
 
-  const removeTrack = useCallback(id => {
+  const removeTrack = useCallback(async id => {
+    await apiRemoveTrack(id);
     setTracks(prev => prev.filter(track => track.id !== id));
-    deleteTrackFile(id).catch(() => {});
   }, []);
 
-  return { tracks, addTrack, addTracks, updateTrack, removeTrack };
+  return { tracks, loading, error, reload, addTrack, addTracks, updateTrack, removeTrack };
 }

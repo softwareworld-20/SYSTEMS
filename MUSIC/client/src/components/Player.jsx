@@ -11,8 +11,7 @@ import {
   VolumeLowIcon,
 } from "@hugeicons/core-free-icons";
 import ElasticSlider from "./ElasticSlider.jsx";
-import { getTrackFile } from "../trackFiles.js";
-import { normalizeAudio } from "../audio.js";
+import { fetchTrackAudio } from "../api/tracks.js";
 import { formatDuration } from "../media.js";
 import "./Player.css";
 
@@ -59,24 +58,24 @@ export default function Player({ track, queue = [], onSelectTrack, onClose }) {
     setCurrentTime(0);
     setDuration(Number.isFinite(displayed.duration) ? displayed.duration : 0);
 
-    getTrackFile(displayed.id)
-      .then(file => {
+    fetchTrackAudio(displayed.id)
+      .then(blob => {
         if (cancelled) return;
 
-        if (!file) {
+        if (!blob || !blob.size) {
           setError("El audio de esta canción no está disponible.");
           setLoading(false);
           return;
         }
 
-        const url = URL.createObjectURL(normalizeAudio(file));
+        const url = URL.createObjectURL(blob);
         urlRef.current = url;
         setSrc(url);
         setLoading(false);
       })
-      .catch(() => {
+      .catch(failure => {
         if (cancelled) return;
-        setError("No se pudo cargar el audio.");
+        setError(failure?.message || "No se pudo cargar el audio.");
         setLoading(false);
       });
 

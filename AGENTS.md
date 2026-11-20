@@ -1,106 +1,55 @@
 # AGENTS.md
 
-This git repo contains three independent apps and has no root `package.json`.
-Work from the app directory; do not install or run npm at the repo root.
+This git repo holds three independent apps. There is **no root `package.json`**, no shared tooling, and no CI: `cd` into an app before running npm. Each app has its own `package-lock.json`, `node_modules/`, and `client`/`server` npm workspaces.
 
-- `happy_pets/` — React + Express npm-workspaces app (covered below).
-- `caridad/` — separate React/Express app (AyudApp); follow `caridad/README.md`.
-- `MUSIC/` — React + Express welcome page for ListenU (covered below).
+| App | Web | API | What it is |
+| --- | --- | --- | --- |
+| `happy_pets/` | 5174 | 4100 | Happy Pets site + hidden admin panel |
+| `caridad/` | 5173 | 4000 | AyudApp community help wall + MUI admin |
+| `MUSIC/` | 5175 | 4200 | ListenU music app |
 
-## Happy Pets
-
-All commands run from `happy_pets/` (Node 20+):
-
-```bash
-cd happy_pets
-npm install      # root install; installs server and client workspaces
-npm run dev      # API + Vite together
-npm run build    # builds client/dist only
-npm start        # Express on :4100, serves client/dist
-```
-
-- Dev URLs: web `http://localhost:5174`, API `http://localhost:4100/api/health`.
-  (`:5173` and `:4000` belong to `caridad/`; `:5175` and `:4200` to `MUSIC/`.)
-- There are no test, lint, typecheck, or format scripts. Verify changes with
-  `npm run build` and a manual request to `/api/health`; don't invent commands.
-- `npm run dev:server` / `npm run dev:client` run one side only.
-
-### Architecture / gotchas
-
-- `server/src/index.js` is the API entrypoint; auth lives in
-  `server/src/auth.js` and `server/src/routes/auth.js` (mounted at `/api/auth`).
-  Add routes **before** the `app.use("/api", ...)` 404 handler or they will be
-  swallowed.
-- Admin login uses `POST /api/auth/login` and `GET /api/auth/session`. The
-  client stores the token in localStorage as `happy-pets:adminToken`.
-- Demo credentials are `admin@happypets.com` / `Admin123`; override with
-  `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `AUTH_SECRET`. Passwords max 8 characters
-  with no repeated characters (same policy as `caridad/`).
-- Server is ESM on Express 5. A bare `"*"` route pattern is invalid; use
-  middleware or a named wildcard such as `/*splat`.
-- Production static serving is decided once at startup by checking whether
-  `client/dist` exists. Build before `npm start`; restart the server if
-  `client/dist` was created after it started.
-- The Vite dev proxy hardcodes `/api` → port 4100. If you override `PORT`,
-  update `client/vite.config.js` too.
-- Client routes are registered in `client/src/App.jsx`. Add a page under
-  `client/src/pages/` and, if it belongs in the header, a link in
-  `client/src/components/Navbar.jsx`.
-- `/administracion` is a hidden nested route with its own nav in
-  `pages/Administracion.jsx`. `veterinaria` and `inventario` are still
-  placeholders rendering `AdminNotFound`; the public Navbar is hidden for every
-  `/administracion*` path.
-- `/administracion/adopcion` (`pages/AdminAdopcion.jsx`) is intentionally
-  full-width; don't wrap it in the narrow centered containers used by the
-  welcome/404 pages.
-- Adoptions persist in `server/data/adoptions.json` through
-  `server/src/adoptions.js`. `GET/POST/DELETE /api/admin/adoptions` require the
-  Bearer token. Photos are client-compressed to data URLs (`client/src/image.js`)
-  and stored in that JSON; Express JSON limit is 6 MB.
-- Each adoption gets a unique random 6-digit `code`; `addAdoption` keeps the
-  client-supplied code when it is valid and unused, otherwise generates a new
-  one. `readAdoptions` backfills codes for legacy records.
-- The adoption list uses fixed column widths on desktop; at `≤900px` rows
-  become stacked cards via `.admin-adopcion__cell--*` grid rules in
-  `client/src/styles.css`.
-- All styling is global in `client/src/styles.css`: BEM-like class names and
-  CSS variables. No Tailwind, CSS modules, or UI framework. Reuse the existing
-  `--sky-surge`, `--alabaster-grey`, and derived tokens.
-- User-facing copy and `<html lang>` are Spanish; keep new UI text in Spanish.
-
-## MUSIC (ListenU)
-
-All commands run from `MUSIC/` (Node 20+):
+## Common commands (run from the app dir)
 
 ```bash
-cd MUSIC
-npm install      # root install; installs server and client workspaces
-npm run dev      # API + Vite together
+npm install      # installs both workspaces
+npm run dev      # Express API + Vite web together
 npm run build    # builds client/dist only
-npm start        # Express on :4200, serves client/dist
+npm start        # Express serves API + client/dist
 ```
 
-- Dev URLs: web `http://localhost:5175`, API `http://localhost:4200/api/health`.
-- There are no test, lint, typecheck, or format scripts. Verify changes with
-  `npm run build` and a manual request to `/api/health`; don't invent commands.
-- The welcome is the only screen for now: no router, no Navbar. `App.jsx`
-  renders `components/SplineBackground.jsx` (3D background) plus
-  `pages/Welcome.jsx`.
-- The background is a Spline scene (`@splinetool/react-spline`, lazy-loaded) in
-  `components/SplineBackground.jsx`; `SCENE_URL` is the only knob to swap it for
-  a scene published from the user's own Spline account. Don't add a scene ID
-  without checking the license: community scenes need CC BY attribution, hence
-  the "Made with Spline" link in the footer.
-- Palette is applied to the 3D layer in CSS: the canvas is desaturated and a
-  `mix-blend-mode: color` layer tints it with `--blue-bell`/`--blue`; a vignette
-  keeps the copy readable. Keep decorative styling on the background only —
-  the foreground (icon, title, tagline, "Próximamente") stays flat, no glass.
-- The background is `aria-hidden`, `pointer-events: none`, and is not mounted at
-  all when `prefers-reduced-motion: reduce` or WebGL is unavailable (gradient
-  fallback). It also unmounts itself after a 20s load timeout.
-- Palette lives in `client/src/styles.css`: `--blue-bell: #009dff`,
-  `--blue: #0d00fd`, `--black: #000`. Black background, white copy; `--blue`
-  only works as glow/haze, never as text color.
-- Typography: Black Ops One (`--font-display`, used for "ListenU") and Sora
-  (`--font-body`), both Google Fonts with system fallbacks. Styling is global
-  CSS with BEM-like class names, same convention as `happy_pets/`.
+- No app has test, lint, typecheck, format, or CI scripts. Verify with `npm run build` and a manual `GET /api/health`; don't invent commands.
+- All servers are Express 5 + ESM. Register API routes **before** the `app.use("/api", ...)` 404 handler.
+- `client/dist` is checked only once at startup. Build before `npm start`; restart the server if `dist` appears later.
+- All `vite.config.js` files hardcode the API port in the `/api` proxy. If you change a server `PORT`, update the client proxy too.
+- Frontends are React 19 + Vite + `react-router-dom`, global CSS (no Tailwind/CSS modules), Spanish copy and `<html lang="es">`.
+- Admin auth (Happy Pets/AyudApp) is an HMAC bearer token with an 8h TTL. Demo passwords follow the policy "max 8 chars, none repeated".
+
+## Happy Pets (`happy_pets/`)
+
+- Entrypoint `server/src/index.js`; auth in `server/src/auth.js` + `server/src/routes/auth.js` (mounted at `/api/auth`). Login: `POST /api/auth/login`, session: `GET /api/auth/session`; the client stores the token at localStorage `happy-pets:adminToken`.
+- Demo login `admin@happypets.com` / `Admin123`; override with `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `AUTH_SECRET`.
+- Client routes live in `client/src/App.jsx`. `/administracion` is a hidden nested route with its own nav (`pages/Administracion.jsx`); the public Navbar is hidden for every `/administracion*` path. `veterinaria` and `inventario` still render `AdminNotFound`.
+- `/administracion/adopcion` (`pages/AdminAdopcion.jsx`) is intentionally full-width; don't wrap it in the narrow centered containers used by the welcome/404 pages.
+- Adoptions persist in `server/data/adoptions.json` via `server/src/adoptions.js`. `GET/POST/DELETE /api/admin/adoptions` require the Bearer token.
+- Photos are client-compressed in `client/src/image.js` (max 1280px, JPEG 0.82) to data URLs stored in the JSON. Express JSON limit is 6 MB; the photo data URL is capped at 4.5M chars.
+- Each adoption gets a unique random 6-digit `code`; `addAdoption` keeps a valid unused client-supplied code, otherwise generates one. `readAdoptions` backfills legacy records.
+- The adoption list uses fixed table columns on desktop; at `≤900px` rows become stacked cards (`.admin-adopcion__cell--*` rules in `client/src/styles.css`).
+- Styling is global in `client/src/styles.css` with BEM-like class names. Tokens: `--sky-surge: #62B6D5`, `--alabaster-grey: #E2E2E2`; other tones derive from them. Keep UI copy in Spanish.
+
+## AyudApp (`caridad/`)
+
+- `caridad/README.md` is detailed and current; follow it for API/data-model details.
+- Routes: `/`, `/Explorar_comunidad` (capital E, lowercase alias also works) and `/admin`. `/admin` is not linked publicly and is lazy-loaded with MUI + MUI X Charts; MUI is used only by the admin files, while public pages use plain CSS/glassmorphism.
+- Public `POST /api/requests` always saves as `pendiente`; nothing appears on the wall until an admin publishes it. `status` (abierta/en_proceso/resuelta) is separate from `moderation`.
+- Data lives in `server/data/*.json` (`requests.json` starts as `[]`). `server/src/db.js` serializes per-collection writes and uses temp-file + `rename` atomic writes.
+- Admin login `admin` / `Admin123` (`POST /api/auth/login` with `username`/`password`); override with `ADMIN_USER`, `ADMIN_PASSWORD`, `AUTH_SECRET`.
+
+## ListenU (`MUSIC/`)
+
+- **`MUSIC/README.md` is stale**: it says "welcome only, no router, Spline background". The current app has React Router and a WebGL background; trust `client/src/App.jsx` and `components/NavLayout.jsx`.
+- Routes under `NavLayout`: `/`, `/albums`, `/playlist`, `/settings`, plus a `ComingSoon` 404. Only `/playlist` is functional; `/albums` and `/settings` render `ComingSoon`.
+- `/playlist` keeps metadata in localStorage `listen-u:tracks` (`hooks/useTracks.js`) and the MP3 blobs in IndexedDB `listen-u` / `track-files` (`trackFiles.js`). `UploadModal` reads ID3 tags and duration (`mp3.js`, `media.js`) to prefill title/artist/album/cover, then saves both metadata and file. `Player.jsx` is a right-side drawer that plays the stored blob via an object URL; it uses `ElasticSlider` for volume.
+- The background is the fixed WebGL `<DarkVeil>` mounted by `NavLayout`, wrapped in `.veil-background` (`aria-hidden`, `pointer-events: none`, respects `prefers-reduced-motion`).
+- `components/SplineBackground.jsx` is dead code and `@splinetool/react-spline` is not in `package.json`; importing it breaks the build. Don't revive it without adding the dependency.
+- Palette/typography in `client/src/styles.css`: `--blue-bell: #009dff`, `--blue: #0d00fd`, black background, white copy; `--blue` works only as glow/haze, never as text. Black Ops One (`--font-display`) + Sora (`--font-body`).
+- Component CSS is colocated (`PillNav.css`, `DarkVeil.css`, `AnimatedList.css`); page/layout styles stay in `styles.css`. Playlist and upload-modal styles live in `client/src/styles/upload.css`, imported by `Playlist.jsx`.

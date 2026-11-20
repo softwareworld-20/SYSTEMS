@@ -19,16 +19,24 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (isAuthenticated()) return <Navigate to="/" replace />;
 
-  const handleSubmit = event => {
+  const handleSubmit = async event => {
     event.preventDefault();
-    if (signIn(username, password)) {
+    if (submitting) return;
+
+    setSubmitting(true);
+    setError("");
+    const result = await signIn(username, password);
+    setSubmitting(false);
+
+    if (result.ok) {
       navigate("/", { replace: true });
-      return;
+    } else {
+      setError(result.error || "Usuario o contraseña incorrectos.");
     }
-    setError("Usuario o contraseña incorrectos.");
   };
 
   return (
@@ -101,8 +109,8 @@ export default function Login() {
               </p>
             )}
 
-            <button type="submit" className="login__submit">
-              Entrar
+            <button type="submit" className="login__submit" disabled={submitting}>
+              {submitting ? "Entrando…" : "Entrar"}
             </button>
           </form>
         </div>

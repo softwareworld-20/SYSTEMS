@@ -10,7 +10,7 @@ import {
 import PillNav from "./PillNav.jsx";
 import DarkVeil from "./DarkVeil.jsx";
 import { VEIL_PROPS } from "./veilProps.js";
-import { signOut } from "../auth.js";
+import { currentUser, signOut } from "../auth.js";
 
 const ITEMS = [
   { label: "Inicio", href: "/" },
@@ -29,6 +29,7 @@ export default function NavLayout() {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
+  const username = currentUser()?.username || "SamuelS";
 
   useEffect(() => {
     setProfileOpen(false);
@@ -91,12 +92,12 @@ export default function NavLayout() {
               onClick={() => setProfileOpen(open => !open)}
               aria-haspopup="menu"
               aria-expanded={profileOpen}
-              aria-label="Opciones del perfil de SamuelS"
+              aria-label={`Opciones del perfil de ${username}`}
             >
               <span className="layout__profile-avatar" aria-hidden="true">
                 <HugeiconsIcon icon={UserIcon} size={17} strokeWidth={1.8} />
               </span>
-              <span className="layout__profile-name">SamuelS</span>
+              <span className="layout__profile-name">{username}</span>
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
                 size={14}

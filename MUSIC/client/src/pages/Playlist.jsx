@@ -33,8 +33,10 @@ const groupLetter = title => {
 };
 
 export default function Playlist() {
-  const { tracks, addTrack, addTracks, updateTrack, removeTrack } = useTracks();
+  const { tracks, loading, error, reload, addTrack, addTracks, updateTrack, removeTrack } =
+    useTracks();
   const [modalOpen, setModalOpen] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [activeId, setActiveId] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
@@ -134,15 +136,18 @@ export default function Playlist() {
     clearSelection();
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (selected.size === 0) return;
 
     const ids = [...selected];
-    ids.forEach(id => {
-      removeTrack(id);
-      if (id === activeId) setActiveId(null);
-    });
-    clearSelection();
+    setActionError("");
+    try {
+      await Promise.all(ids.map(id => removeTrack(id)));
+      if (ids.includes(activeId)) setActiveId(null);
+      clearSelection();
+    } catch (failure) {
+      setActionError(failure?.message || "No se pudieron eliminar las canciones.");
+    }
   };
 
   const renderTrack = track => {
@@ -272,7 +277,22 @@ export default function Playlist() {
         </div>
       )}
 
-      {tracks.length === 0 ? (
+      {actionError ? (
+        <p className="playlist__empty" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+
+      {loading ? (
+        <p className="playlist__empty">Cargando tu música…</p>
+      ) : error ? (
+        <p className="playlist__empty" role="alert">
+          {error}
+          <button type="button" className="playlist__clear-search" onClick={reload}>
+            Reintentar
+          </button>
+        </p>
+      ) : tracks.length === 0 ? (
         <p className="playlist__empty">
           Aún no has añadido música. Pulsa el <strong>+</strong> para empezar.
         </p>

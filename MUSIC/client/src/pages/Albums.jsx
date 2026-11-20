@@ -1,5 +1,5 @@
 // client/src/pages/Albums.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
@@ -11,14 +11,28 @@ import AnimatedList from "../components/AnimatedList.jsx";
 import Player from "../components/Player.jsx";
 import { useTracks } from "../hooks/useTracks.js";
 import { buildAlbums } from "../albumMeta.js";
+import { listAlbumMeta } from "../api/tracks.js";
 import { formatDuration } from "../media.js";
 import "../styles/upload.css";
 
 export default function Albums() {
   const { tracks } = useTracks();
-  const albums = useMemo(() => buildAlbums(tracks), [tracks]);
+  const [albumMeta, setAlbumMeta] = useState([]);
+  const albums = useMemo(() => buildAlbums(tracks, albumMeta), [tracks, albumMeta]);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [activeId, setActiveId] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    listAlbumMeta()
+      .then(metas => {
+        if (alive) setAlbumMeta(Array.isArray(metas) ? metas : []);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const activeTrack = tracks.find(t => t.id === activeId) ?? null;
 
