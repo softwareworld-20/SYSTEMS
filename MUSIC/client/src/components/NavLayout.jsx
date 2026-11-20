@@ -8,6 +8,7 @@ import {
   ArrowDown01Icon,
 } from "@hugeicons/core-free-icons";
 import PillNav from "./PillNav.jsx";
+import MobileNav from "./MobileNav.jsx";
 import DarkVeil from "./DarkVeil.jsx";
 import { VEIL_PROPS } from "./veilProps.js";
 import { currentUser, signOut } from "../auth.js";
@@ -68,6 +69,14 @@ export default function NavLayout() {
 
       <div className="layout">
         <header className="layout__header">
+          <MobileNav
+            items={ITEMS}
+            activeHref={pathname}
+            linkComponent={RouterLink}
+          />
+
+          <span className="layout__mobile-brand">ListenU</span>
+
           <PillNav
             logo={<span className="layout__logo">LU</span>}
             logoAlt="ListenU"

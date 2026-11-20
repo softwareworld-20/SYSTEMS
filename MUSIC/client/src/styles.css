@@ -838,20 +838,37 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* Marca del header solo cuando el PillNav se oculta en móvil */
+.layout__mobile-brand {
+  display: none;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, #fff 0%, #9fe0ff 70%, var(--blue-bell) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* ------------------------------------------------------------------ */
-/* Móviles: el perfil va en su propia fila para no tapar el menú       */
+/* Tablet/teléfono: nav lateral derecho en vez del PillNav             */
 /* ------------------------------------------------------------------ */
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .layout__header {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    gap: 0.55rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
     padding: calc(0.6rem + env(safe-area-inset-top)) 0.9rem 0.4rem;
   }
 
   .layout__header .pill-nav {
-    align-self: center;
+    display: none;
+  }
+
+  .layout__mobile-brand {
+    display: block;
   }
 
   .layout__profile {
@@ -859,9 +876,10 @@ body {
     top: auto;
     right: auto;
     transform: none;
-    align-self: flex-end;
   }
+}
 
+@media (max-width: 640px) {
   .layout__profile-trigger {
     min-width: 40px;
     min-height: 40px;
