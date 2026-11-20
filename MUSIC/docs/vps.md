@@ -1,166 +1,148 @@
 # Paso 6 — Migración de PostgreSQL al VPS
 
 La idea es **no cambiar una sola línea de código**: solo `DATABASE_URL`.
-El esquema, los metadatos y el audio viajan en un único `pg_dump`.
+El esquema, los metadatos y el audio viajan en un único dump.
 
-## 0. Requisitos
+Estado real de este despliegue:
 
-- VPS con Ubuntu/Debian y acceso SSH (`usuario@host`).
-- En el VPS: Node 20+ (se probó con Node 26), npm y PostgreSQL.
-- En local: `.env` con la `DATABASE_URL` de `db_music` (ya configurada).
+- VPS: Ubuntu 24.04, Node 22, PostgreSQL 16.15, pm2, nginx + Certbot.
+- Repo: `/var/www/SYSTEMS`, rama `test_app`.
+- App: `pm2 start npm --name listen-u -- start` (puerto **3001**).
+- URL pública: `https://music.sworlddevelop.com` (nginx → `127.0.0.1:3001`).
+- Local: PostgreSQL 18.6 en `127.0.0.1:5432`, app en el puerto 4200.
 
 ---
 
 ## 1. Preparar PostgreSQL en el VPS
 
-Conectarse:
-
 ```bash
-ssh usuario@host
+ssh softwareworld@5.253.234.225
 ```
 
-Instalar (si no está):
+El rol `music_user` y la base `db_music` se crean **una sola vez** (necesita
+`sudo`). La contraseña se genera en el propio VPS y queda solo en `.env`:
 
 ```bash
-sudo apt update
-sudo apt install -y postgresql postgresql-client
-sudo systemctl enable --now postgresql
-```
+cd /var/www/SYSTEMS/MUSIC
+DBPASS=$(openssl rand -hex 16)
 
-Crear el rol y la base (elige una contraseña fuerte y **no la reutilices**):
-
-```bash
-sudo -u postgres psql <<'SQL'
-DO $$
+sudo -u postgres psql <<SQL
+DO \$\$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'music_user') THEN
-    CREATE ROLE music_user LOGIN PASSWORD 'CAMBIA_ESTA_CLAVE';
+    CREATE ROLE music_user LOGIN PASSWORD '$DBPASS';
   ELSE
-    ALTER ROLE music_user WITH LOGIN PASSWORD 'CAMBIA_ESTA_CLAVE';
+    ALTER ROLE music_user WITH LOGIN PASSWORD '$DBPASS';
   END IF;
 END
-$$;
+\$\$;
 SQL
 
 sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='db_music'" \
   | grep -q 1 || sudo -u postgres psql -c "CREATE DATABASE db_music OWNER music_user;"
-
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE db_music TO music_user;"
+
+umask 077
+printf 'PORT=3001\nDATABASE_URL=postgresql://music_user:%s@127.0.0.1:5432/db_music\nAUTH_SECRET=%s\n' \
+  "$DBPASS" "$(openssl rand -hex 32)" > .env
+unset DBPASS
 ```
 
-> Deja la base **vacía**: el dump traerá las tablas. Si creas primero el esquema
-> con la migración, `pg_restore` encontrará objetos duplicados.
+> `psql` **no** interpola variables dentro de un bloque `DO $$ … $$`: por eso la
+> contraseña se inyecta desde el shell con un heredoc sin comillas.
 
 ---
 
-## 2. Volcar la BD local y subir el dump
+## 2. Volcar la BD local
 
-Desde `MUSIC/` en tu laptop:
+`pg_dump` de PostgreSQL 18 produce un archivo `custom` que **pg_restore 16 no
+puede leer** (`unsupported version (1.16)`). Tampoco entiende `transaction_timeout`
+ni `\restrict`. Por eso se usa el dump SQL portable:
 
 ```bash
-scripts/backup-db.sh /tmp/opencode/listenu-dump.dump
-scp /tmp/opencode/listenu-dump.dump usuario@host:/tmp/listenu-dump.dump
+scripts/backup-db-portable.sh /tmp/opencode/listenu-portable.sql
+scp /tmp/opencode/listenu-portable.sql softwareworld@5.253.234.225:/tmp/listenu.sql
 ```
 
-El dump es `custom` e incluye esquema, `app_users`, `tracks` (con `data bytea`)
-y `album_meta`. No contiene la contraseña de `.env`.
+`scripts/restore-db.sh` sigue siendo válido para dumps `custom` cuando ambos
+servidores tienen la misma versión de PostgreSQL.
 
 ---
 
 ## 3. Restaurar en el VPS
 
-Con `DATABASE_URL` del VPS:
-
 ```bash
-ssh usuario@host
-export TARGET_DATABASE_URL='postgresql://music_user:CAMBIA_ESTA_CLAVE@127.0.0.1:5432/db_music'
-scripts/restore-db.sh /tmp/listenu-dump.dump
-psql "$TARGET_DATABASE_URL" -c 'SELECT count(*) AS tracks FROM tracks;'
+ssh softwareworld@5.253.234.225
+cd /var/www/SYSTEMS/MUSIC
+set -a; . ./.env; set +a
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /tmp/listenu.sql
+psql "$DATABASE_URL" -c 'SELECT count(*) FROM tracks;'
+rm /tmp/listenu.sql
 ```
 
-Si prefieres restaurar desde tu laptop sin subir el dump, abre el túnel:
-
-```bash
-scripts/tunnel-vps.sh usuario@host        # deja 127.0.0.1:5433 apuntando al VPS
-```
-
-y en otra terminal:
-
-```bash
-export TARGET_DATABASE_URL='postgresql://music_user:CAMBIA_ESTA_CLAVE@127.0.0.1:5433/db_music'
-scripts/restore-db.sh /tmp/opencode/listenu-dump.dump
-```
+Si no quieres subir el archivo, abre un túnel con
+`scripts/tunnel-vps.sh softwareworld@5.253.234.225` y usa `127.0.0.1:5433` en la
+`DATABASE_URL` del proceso que hace `pg_restore`.
 
 ---
 
-## 4. Arrancar la app en el VPS
-
-Subir el proyecto (sin `node_modules` ni `.env`):
+## 4. Desplegar y arrancar
 
 ```bash
-rsync -av --exclude node_modules --exclude .git --exclude .env \
-  ./ usuario@host:/home/usuario/listenu/
-```
-
-En el VPS:
-
-```bash
-cd /home/usuario/listenu
-cp .env.example .env
-# Editar .env:
-#   DATABASE_URL=postgresql://music_user:CAMBIA_ESTA_CLAVE@127.0.0.1:5432/db_music
-#   AUTH_SECRET=<openssl rand -hex 32>   <- distinto del secreto local
-#   PORT=4200
+ssh softwareworld@5.253.234.225
+cd /var/www/SYSTEMS
+git pull --ff-only origin test_app
+cd MUSIC
 npm ci
 npm run build
-npm start
+pm2 start npm --name listen-u -- start
+pm2 save
 ```
 
-`client/dist` debe existir antes de `npm start`: el servidor lo comprueba solo
-una vez al arrancar. Para producción conviene `pm2 start npm -- start` o un
-servicio systemd, y un reverse proxy (Nginx/Caddy) con HTTPS.
+Si el VPS tiene un lockfile modificado por otro `npm`, guardarlo antes con
+`git stash push -- MUSIC/package-lock.json`.
 
-> Si el VPS tiene otro puerto para Express, cambia `PORT` **y** el proxy
-> `target` en `client/vite.config.js`. El proxy solo afecta al `npm run dev`;
-> en producción Express sirve `client/dist` directamente.
+`client/dist` debe existir antes de arrancar: Express lo comprueba una sola vez
+al iniciar. El `AUTH_SECRET` del VPS es distinto del local (así las sesiones no
+se comparten entre entornos).
 
-### Sobre GitHub y `git pull`
+### Reverse proxy
 
-El código es el **mismo** en local y en el VPS, pero la configuración **no**:
-`.env` está en `.gitignore` y **no se sube a GitHub**, así que un `git pull` en el
-VPS nunca lo crea ni lo sobrescribe. Cada entorno tiene su propio `.env`:
+`/etc/nginx/sites-available/music.sworlddevelop.com` ya sirve `client/dist`,
+redirige 80 → 443 con Certbot y hace `proxy_pass` a `127.0.0.1:3001`. No hace
+falta tocar nginx: basta con que Express escuche en 3001 (`PORT` del `.env`).
+El proxy `/api` de `client/vite.config.js` solo afecta al `npm run dev`.
 
-- local: `DATABASE_URL` apunta a `127.0.0.1:5432` y su `AUTH_SECRET`;
-- VPS: `DATABASE_URL` apunta a su propio PostgreSQL y **otro** `AUTH_SECRET`.
+Para que pm2 se levante solo tras un reinicio, ejecuta una vez (requiere sudo):
 
-Las plantillas versionadas son `.env.example` y `.env.vps.example`. Usar un
-`AUTH_SECRET` distinto en el VPS es lo correcto: invalida las sesiones del otro
-entorno y evita compartir el secreto entre máquinas. Al cambiar de entorno hay
-que volver a iniciar sesión (el token viejo dejará de ser válido).
+```bash
+pm2 startup      # copia y ejecuta el comando sudo que imprime
+pm2 save
+```
 
 ---
 
 ## 5. Verificación
 
 ```bash
-curl -sS http://localhost:4200/api/health
+curl -sS https://music.sworlddevelop.com/api/health
 # {"ok":true,...,"db":"ok"}
 
-curl -sS -X POST http://localhost:4200/api/auth/login \
+curl -sS -X POST https://music.sworlddevelop.com/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"SamuelS","password":"Samu3l!9"}'
-# {"token":"...","username":"SamuelS","expiresIn":28800}
 ```
 
-Desde el navegador: entrar con `SamuelS`, comprobar que `/playlist` lista las
-canciones y que una pista suena (el audio se descarga con el token).
+En el navegador: entrar en `https://music.sworlddevelop.com`, iniciar sesión
+con `SamuelS`, comprobar `/playlist` y reproducir una pista (el audio se baja
+con el token mediante `fetch`).
 
 ---
 
 ## Seguridad
 
-- No expongas el puerto 5432 a Internet: solo localhost o túnel SSH.
-- `AUTH_SECRET` debe ser distinto en local y VPS; cambiarlo invalida sesiones.
-- `.env` está ignorado por git; nunca subas la contraseña ni el dump a un repo.
-- El dump contiene el audio: guárdalo en una ruta privada y bórralo del VPS
-  después de restaurar.
+- PostgreSQL escucha solo en localhost; no exponer el puerto 5432.
+- `.env` está ignorado por git: un `git pull` nunca lo crea ni lo sobrescribe.
+  Cada entorno tiene su propia `DATABASE_URL` y su propio `AUTH_SECRET`.
+- No subir dumps ni contraseñas al repositorio. Borrar el dump del VPS tras
+  restaurar.

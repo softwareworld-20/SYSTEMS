@@ -225,3 +225,15 @@ Los ajustes del shader están en `components/veilProps.js` y los comparten
   sin añadir la dependencia.
 - `AnimatedList`, `InfiniteMenu`, `ElasticSlider` y `PillNav` son componentes
   locales con CSS propio; mantén sus props actuales antes de cambiar su API.
+
+## Despliegue en VPS
+
+- Repo en `/var/www/SYSTEMS`, rama `test_app`. App arrancada con pm2
+  (`pm2 start npm --name listen-u -- start`) en el puerto **3001**.
+- nginx sirve `client/dist` y hace `proxy_pass` a `127.0.0.1:3001` para
+  `music.sworlddevelop.com` (HTTPS con Certbot). El puerto 4200 es solo local.
+- En el VPS hay un `.env` propio con `PORT=3001` y otro `AUTH_SECRET`. `.env`
+  está ignorado por git: `git pull` no lo toca.
+- El dump `custom` de PostgreSQL 18 no lo lee `pg_restore` 16; para migrar
+  entre versiones usa `scripts/backup-db-portable.sh` y restaura con `psql`.
+  La guía completa está en `docs/vps.md`.
